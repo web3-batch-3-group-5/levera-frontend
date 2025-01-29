@@ -1,4 +1,5 @@
-import { Button } from '@/components/ui/button';
+import LendingPool from "@/components/lending-pool/LendingPool";
+import { Button } from "@/components/ui/button";
 
 export function HomePage() {
   return (
@@ -26,14 +27,12 @@ export function HomePage() {
           <div className="p-6 bg-gray-100 rounded-lg shadow-lg">
             <h2 className="text-xl font-bold mb-2">Earn</h2>
             <p className="text-gray-800">
-            Earn passive APY and extra rewards, withdraw any time.
+              Earn passive APY and extra rewards, withdraw any time.
             </p>
           </div>
           <div className="p-6 bg-gray-100 rounded-lg shadow-lg">
             <h2 className="text-xl font-bold mb-2">Borrow</h2>
-            <p className="text-gray-800">
-              Borrow assets with leverage.
-            </p>
+            <p className="text-gray-800">Borrow assets with leverage.</p>
           </div>
           <div className="p-6 bg-gray-100 rounded-lg shadow-lg">
             <h2 className="text-xl font-bold mb-2">Trade</h2>
@@ -42,6 +41,8 @@ export function HomePage() {
             </p>
           </div>
         </div>
+
+        <LendingPool />
       </main>
     </>
   );
