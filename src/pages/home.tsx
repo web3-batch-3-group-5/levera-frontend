@@ -1,7 +1,14 @@
+import { useRouter } from "next/router";
 import LendingPool from "@/components/lending-pool/LendingPool";
 import { Button } from "@/components/ui/button";
 
 export function HomePage() {
+  const router = useRouter();
+
+  const handleButton = () => {
+    router.push("/pools");
+  };
+
   return (
     <>
       <main className="flex-1 container mx-auto px-16 py-16">
@@ -14,7 +21,11 @@ export function HomePage() {
           </p>
 
           <div className="flex justify-center gap-4">
-            <Button variant="default" size="lg">
+            <Button
+              variant="default"
+              size="lg"
+              onClick={handleButton}
+            >
               Get Started
             </Button>
             <Button variant="outline" size="lg">

@@ -4,9 +4,9 @@ import {
     getDefaultWallets,
 } from '@rainbow-me/rainbowkit';
 import { http, createConfig } from 'wagmi';
-import { mainnet, sepolia } from 'wagmi/chains';
+import { mainnet, sepolia, arbitrum, arbitrumSepolia } from 'wagmi/chains';
 
-export const chains = [mainnet, sepolia] as const;
+export const chains = [mainnet, sepolia, arbitrum, arbitrumSepolia] as const;
 
 const projectId = 'b888ce41be0433ef0fcde58c52ae199c'; //projectId from cloud.reown.com
 const appName = 'levera';
@@ -30,5 +30,7 @@ export const wagmiConfig = createConfig({
     transports: {
         [mainnet.id]: http(),
         [sepolia.id]: http(),
+        [arbitrum.id]: http(),
+        [arbitrumSepolia.id]: http(),
     },
 });
