@@ -104,18 +104,12 @@ export default function PoolDetailsPage() {
                         <p className="text-2xl font-bold">
                             {formatTokenAmount(totalSupplyAssets)} {pool.loanTokenSymbol}
                         </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Shares: {formatTokenAmount(totalSupplyShares)}
-                        </p>
                     </div>
 
                     <div className="bg-card rounded-lg border p-6">
                         <h3 className="text-sm text-muted-foreground mb-2">Total Borrow</h3>
                         <p className="text-2xl font-bold">
                             {formatTokenAmount(totalBorrowAssets)} {pool.loanTokenSymbol}
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-1">
-                            Shares: {formatTokenAmount(totalBorrowShares)}
                         </p>
                     </div>
 
@@ -186,11 +180,11 @@ export default function PoolDetailsPage() {
                     <Button
                         size="lg"
                         variant="outline"
-                        onClick={() => router.push(`/pools/${poolAddress}/borrow`)}
+                        onClick={() => router.push(`/pools/${poolAddress}/withdraw`)}
                         disabled={!pool.isActive || isWithdrawPending}
                         className="flex-1"
                     >
-                        Borrow
+                        Withdraw
                     </Button>
                 </div>
             </div>
