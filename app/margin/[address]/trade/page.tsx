@@ -9,10 +9,12 @@ import { ArrowLeft } from 'lucide-react';
 import { useLendingPool } from '@/hooks/useLendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
 import { usePositionFactory } from '@/hooks/usePositionFactory';
-import { formatTokenAmount } from '@/lib/utils/format';
+import { formatTokenAmount } from '@/lib/utils';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { erc20Abi } from 'viem';
 import { toast } from 'sonner';
+import { getConversionRate } from '@/lib/convertPrice';
+import { LiquidationCalculator } from '@/lib/health';
 
 export default function MarginTradePage() {
     const router = useRouter();
@@ -25,18 +27,61 @@ export default function MarginTradePage() {
     const [leverage, setLeverage] = useState(1.5);
     const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
     const [hasApproved, setHasApproved] = useState(false);
+    const [liquidationPrice, setLiquidationPrice] = useState<number | null>(null);
+    const [healthFactor, setHealthFactor] = useState<number | null>(null);
+    const [ltv, setLtv] = useState<number | null>(null);
+    const [borrowAmount, setLiquidationBorrowAmount] = useState<number | null>(null);
 
     // Get pool data
     const { poolAddresses, pools } = useLendingPoolFactory();
     const poolIndex = poolAddresses.findIndex(addr => addr.toLowerCase() === poolAddress.toLowerCase());
     const pool = poolIndex !== -1 ? pools[poolIndex] : undefined;
-
+    
     const {
         totalSupplyAssets,
         interestRate,
         ltp,
     } = useLendingPool(poolAddress);
+    const calculator = new LiquidationCalculator(BigInt(80));
 
+    
+    useEffect(() => {
+        let isMounted = true; 
+        const calculate = async () => {        
+            try {
+                const effectiveCollateral: number = Number(collateralAmount) * leverage;
+                const borrowAmount = await getConversionRate(
+                    (Number(collateralAmount) * (leverage - 1)), 
+                    "0x694AA1769357215DE4FAC081bf1f309aDC325306", 
+                    "0xAb5c49580294Aff77670F839ea425f5b78ab3Ae7"
+                );
+                const effectiveCollateralPrice: number = await getConversionRate(
+                    effectiveCollateral,
+                    "0x694AA1769357215DE4FAC081bf1f309aDC325306",
+                    "0xAb5c49580294Aff77670F839ea425f5b78ab3Ae7"
+                );
+
+                const [liqPrice, health, ltvRatio] = await Promise.all([
+                    calculator.getLiquidationPrice(effectiveCollateral, Number(borrowAmount)),
+                    calculator.getHealth(effectiveCollateralPrice, Number(borrowAmount)),
+                    calculator.getLTV(effectiveCollateralPrice,  Number(borrowAmount)),
+                ]);
+
+                setLiquidationBorrowAmount(borrowAmount);
+                setLiquidationPrice(liqPrice);
+                setHealthFactor(health);
+                setLtv(ltvRatio);
+            } catch (error) {
+                console.error("Error calculating values:", error);
+            }
+        };
+    
+        calculate();
+        return () => {
+            isMounted = false;
+        };
+    }, [collateralAmount, leverage]);
+    
     // Position factory access
     const { createPosition, isCreatingPosition } = usePositionFactory();
     const { writeContract } = useWriteContract();
@@ -87,7 +132,7 @@ export default function MarginTradePage() {
         if (!collateralAmount || !leverage) {
             return {
                 borrowAmount: 0n,
-                liquidationPrice: '0.00',
+                liquidationPrice: 0,
                 healthFactor: 1.0,
                 loanToValue: 0.33,
             };
@@ -98,24 +143,25 @@ export default function MarginTradePage() {
             const borrowAmount = collateralValue * (leverage - 1);
 
             // These calculations are simplified and should be adjusted based on your protocol logic
-            const healthFactor = ltp ? Number(ltp) / 100 / (leverage - 1) : 1.0;
-            const loanToValue = (leverage - 1) / leverage;
+            // const healthFactor = ltp ? Number(ltp) / 100 / (leverage - 1) : 1.0;
+            // const loanToValue = (leverage - 1) / leverage;
 
             // For liquidation price, you should use your contract's formula
             // This is a placeholder calculation
-            const liquidationPrice = ltp ? collateralValue * Number(ltp) / 100 : 0.0;
+            // const liquidationPrice = ltp ? collateralValue * Number(ltp) / 100 : 0.0;
 
             return {
-                borrowAmount: parseUnits((borrowAmount).toFixed(18), 18),
-                liquidationPrice: liquidationPrice.toFixed(4),
-                healthFactor: Number(healthFactor.toFixed(2)),
-                loanToValue: Number(loanToValue.toFixed(4)),
+                borrowAmount: parseUnits(borrowAmount.toFixed(18), 18),
+                liquidationPrice: liquidationPrice ? liquidationPrice.toFixed(4) : "0.0000",
+                healthFactor: Number(healthFactor?.toFixed(2)) || 0,
+                loanToValue: Number(ltv?.toFixed(4)) || 0,
             };
+            
         } catch (error) {
             console.error('Error calculating position details:', error);
             return {
                 borrowAmount: 0n,
-                liquidationPrice: '0.00',
+                liquidationPrice: 0,
                 healthFactor: 1.0,
                 loanToValue: 0.33,
             };
