@@ -1,67 +1,65 @@
-export const GET_LENDING_POOL = `
-  query GetLendingPool($poolId: ID!) {
-    lendingPool(id: $poolId) {
+export const GET_LENDING_POOLS = `
+  query GetLendingPools($first: Int, $skip: Int) {
+    allLendingPools(first: $first, skip: $skip) {
       id
-      loanToken {
-        id
-        symbol
-        name
-        decimals
-      }
-      collateralToken {
-        id
-        symbol
-        name
-        decimals
-      }
+      lendingPool
+      loanToken
+      collateralToken
+      blockTimestamp
+    }
+  }
+`;
+
+export const GET_LENDING_POOL = `
+  query GetLendingPoolStat($poolId: ID!) {
+    lendingPoolStats(id: $poolId) {
+      id
+      lendingPool
+      loanToken
+      collateralToken
       totalSupplyAssets
       totalSupplyShares
       totalBorrowAssets
       totalBorrowShares
-      borrowRate
-      createdAt
-      updatedAt
+      totalCollateral
+      utilizationRate
+      blockTimestamp
     }
   }
 `;
 
 export const GET_USER_POSITIONS = `
-  query GetUserPositions($userId: String!) {
-    positions(where: { user: $userId }) {
+  query GetUserPositions($lendingPool: Bytes!, $userId: Bytes!) {
+    userPositions(where: { lendingPool: $lendingPool, caller: $userId }) {
       id
-      user
-      pool {
-        id
-        loanToken {
-          symbol
-        }
-        collateralToken {
-          symbol
-        }
-      }
-      collateralAmount
-      borrowedAmount
-      healthFactor
-      liquidationPrice
-      leverage
-      createdAt
-      updatedAt
+      lendingPool,
+      caller,
+      onBehalf,
+      baseCollateral,
+      effectiveCollateral,
+      borrowShares,
+      leverage,
+      liquidationPrice,
+      health,
+      ltv
     }
   }
 `;
 
 export const GET_POOL_POSITIONS = `
-  query GetPoolPositions($poolId: ID!) {
-    positions(where: { pool: $poolId }) {
+  query GetUserPositions($positionId: ID!) {
+    userPositions(id: $positionId) {
       id
-      user
-      collateralAmount
-      borrowedAmount
-      healthFactor
-      liquidationPrice
-      leverage
-      createdAt
-      updatedAt
+      lendingPool,
+      caller,
+      onBehalf,
+      baseCollateral,
+      effectiveCollateral,
+      borrowShares,
+      leverage,
+      liquidationPrice,
+      health,
+      ltv
     }
   }
 `;

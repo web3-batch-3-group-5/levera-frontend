@@ -6,7 +6,7 @@ export interface LendingPool {
     totalSupplyShares: string;
     totalBorrowAssets: string;
     totalBorrowShares: string;
-    borrowRate: string;
+    interestRate: string;
     positions: Position[];
     createdAt: string;
     updatedAt: string;
