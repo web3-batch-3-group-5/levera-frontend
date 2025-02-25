@@ -1,3 +1,4 @@
+// app/pools/page.tsx with focus on rendering pool data
 'use client';
 
 import { useRouter } from 'next/navigation';
@@ -11,61 +12,48 @@ import { useAccount } from 'wagmi';
 
 export default function PoolsPage() {
     const router = useRouter();
-    // Only destructure what we actually use
-    const { isConnected } = useAccount();
+    const { address, isConnected } = useAccount();
     const { poolAddresses, pools, isLoading, error, refresh } = useLendingPoolFactory();
 
     const [searchTerm, setSearchTerm] = useState('');
     const [isRefreshing, setIsRefreshing] = useState(false);
     const [isClient, setIsClient] = useState(false);
 
-    // Debug logging
-    useEffect(() => {
-        console.log('=== POOLS PAGE DEBUG INFO ===');
-        console.log('isConnected:', isConnected);
-        console.log('poolAddresses:', poolAddresses);
-        console.log('pools:', pools);
-        console.log('isLoading:', isLoading);
-        console.log('error:', error);
-        console.log('isClient:', isClient);
-        console.log('===========================');
-    }, [isConnected, poolAddresses, pools, isLoading, error, isClient]);
-
-    // Fix for hydration mismatch - only set isClient to true after component mounts
+    // Client-side only check
     useEffect(() => {
         setIsClient(true);
     }, []);
 
-    // Handle manual refresh
-    const handleRefresh = async () => {
-        console.log('Manual refresh triggered');
-        setIsRefreshing(true);
+    // Debug logging to verify pool data
+    useEffect(() => {
+        if (poolAddresses && poolAddresses.length > 0) {
+            console.log('Pool addresses loaded:', poolAddresses);
+            console.log('Pool details loaded:', pools);
+        }
+    }, [poolAddresses, pools]);
 
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
         try {
             await refresh();
-            console.log('Refresh completed');
+            console.log('Pools refreshed successfully');
         } catch (err) {
-            console.error('Refresh error:', err);
+            console.error('Error refreshing pools:', err);
         } finally {
-            setTimeout(() => setIsRefreshing(false), 500); // Minimum 500ms of loading state for UX
+            setTimeout(() => setIsRefreshing(false), 500);
         }
     };
 
     const handleSupply = (poolAddress: Address) => {
-        console.log('Navigate to supply for pool:', poolAddress);
         router.push(`/pools/${poolAddress}/supply`);
     };
 
     const handleBorrow = (poolAddress: Address) => {
-        console.log('Navigate to borrow for pool:', poolAddress);
         router.push(`/pools/${poolAddress}/borrow`);
     };
 
     const handleCreatePool = () => {
-        console.log('Create pool triggered, isConnected:', isConnected);
         if (!isConnected) {
-            console.log('Not connected, showing connect wallet message');
-            // Show connect wallet message
             return;
         }
         router.push('/pools/create');
@@ -73,18 +61,9 @@ export default function PoolsPage() {
 
     // Filter pools based on search term
     const filteredPools = pools.filter((pool) => {
-        const matches = pool.loanTokenSymbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        return pool.loanTokenSymbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
             pool.collateralTokenSymbol.toLowerCase().includes(searchTerm.toLowerCase());
-
-        if (searchTerm) {
-            console.log('Filtering pools by:', searchTerm);
-            console.log('Pool matches:', pool.loanTokenSymbol, pool.collateralTokenSymbol, matches);
-        }
-
-        return matches;
     });
-
-    console.log('Rendering pools page, filtered pools:', filteredPools.length);
 
     return (
         <main className="flex-1">
@@ -98,7 +77,6 @@ export default function PoolsPage() {
                                 Supply assets to earn interest or borrow against your collateral
                             </p>
                         </div>
-                        {/* Only render button attributes on client to prevent hydration mismatch */}
                         {isClient ? (
                             <Button
                                 onClick={handleCreatePool}
@@ -109,10 +87,7 @@ export default function PoolsPage() {
                                 Create Pool
                             </Button>
                         ) : (
-                            <Button
-                                onClick={handleCreatePool}
-                                className="gap-2"
-                            >
+                            <Button className="gap-2">
                                 <Plus className="size-4" />
                                 Create Pool
                             </Button>
@@ -128,10 +103,7 @@ export default function PoolsPage() {
                                 placeholder="Search pools by token symbol..."
                                 className="w-full pl-10 pr-4 py-2 bg-background border rounded-md"
                                 value={searchTerm}
-                                onChange={(e) => {
-                                    console.log('Search changed:', e.target.value);
-                                    setSearchTerm(e.target.value);
-                                }}
+                                onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                         {isClient ? (
@@ -145,11 +117,7 @@ export default function PoolsPage() {
                                 {isRefreshing ? 'Refreshing...' : 'Refresh'}
                             </Button>
                         ) : (
-                            <Button
-                                variant="outline"
-                                className="gap-2"
-                                onClick={handleRefresh}
-                            >
+                            <Button variant="outline" className="gap-2">
                                 <RefreshCw className="size-4" />
                                 Refresh
                             </Button>
@@ -199,14 +167,6 @@ export default function PoolsPage() {
                                                         <div className="h-4 bg-muted rounded w-24"></div>
                                                         <div className="h-5 bg-muted rounded w-20"></div>
                                                     </div>
-                                                    <div className="space-y-2">
-                                                        <div className="h-4 bg-muted rounded w-24"></div>
-                                                        <div className="h-5 bg-muted rounded w-20"></div>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <div className="h-4 bg-muted rounded w-24"></div>
-                                                        <div className="h-5 bg-muted rounded w-20"></div>
-                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -226,10 +186,7 @@ export default function PoolsPage() {
                                 </p>
                                 {isClient && isConnected && (
                                     <Button
-                                        onClick={() => {
-                                            console.log('Create first pool clicked');
-                                            router.push('/pools/create');
-                                        }}
+                                        onClick={() => router.push('/pools/create')}
                                         className="gap-2"
                                     >
                                         <Plus className="size-4" />
@@ -256,10 +213,7 @@ export default function PoolsPage() {
                                     </p>
                                     <Button
                                         variant="link"
-                                        onClick={() => {
-                                            console.log('Clear search clicked');
-                                            setSearchTerm('');
-                                        }}
+                                        onClick={() => setSearchTerm('')}
                                     >
                                         Clear search
                                     </Button>
@@ -268,7 +222,6 @@ export default function PoolsPage() {
                                 // Pool Cards Grid
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {filteredPools.map((pool, index) => {
-                                        console.log('Rendering pool card:', index, pool.loanTokenSymbol, pool.collateralTokenSymbol);
                                         const poolAddress = poolAddresses[index];
                                         return (
                                             <PoolCard
@@ -276,7 +229,6 @@ export default function PoolsPage() {
                                                 poolAddress={poolAddress}
                                                 pool={pool}
                                                 onSupply={() => handleSupply(poolAddress)}
-                                                onBorrow={() => handleBorrow(poolAddress)}
                                             />
                                         );
                                     })}

@@ -9,7 +9,7 @@ export function useLendingPool(poolAddress: Address) {
     const { address: userAddress } = useAccount();
 
     // Read total supply and borrow info
-    const { data: totalSupplyAssets } = useReadContract({
+    const { data: totalSupplyAssets, isLoading: isLoadingSupply, error: supplyError } = useReadContract({
         address: poolAddress,
         abi: lendingPoolABI,
         functionName: 'totalSupplyAssets',
@@ -21,7 +21,7 @@ export function useLendingPool(poolAddress: Address) {
         functionName: 'totalSupplyShares',
     });
 
-    const { data: totalBorrowAssets } = useReadContract({
+    const { data: totalBorrowAssets, isLoading: isLoadingBorrow, error: borrowError } = useReadContract({
         address: poolAddress,
         abi: lendingPoolABI,
         functionName: 'totalBorrowAssets',
@@ -33,13 +33,7 @@ export function useLendingPool(poolAddress: Address) {
         functionName: 'totalBorrowShares',
     });
 
-    const { data: totalCollateral } = useReadContract({
-        address: poolAddress,
-        abi: lendingPoolABI,
-        functionName: 'totalCollateral',
-    });
-
-    const { data: interestRate } = useReadContract({
+    const { data: interestRate, isLoading: isLoadingInterestRate, error: interestRateError } = useReadContract({
         address: poolAddress,
         abi: lendingPoolABI,
         functionName: 'interestRate',
@@ -51,39 +45,23 @@ export function useLendingPool(poolAddress: Address) {
         functionName: 'ltp',
     });
 
-    const { data: positionType } = useReadContract({
-        address: poolAddress,
-        abi: lendingPoolABI,
-        functionName: 'positionType',
-    });
-
-    const { data: utilizationRate } = useReadContract({
-        address: poolAddress,
-        abi: lendingPoolABI,
-        functionName: 'getUtilizationRate',
-    });
-
-    // Read user position info
-    const { data: userPosition } = useReadContract({
-        address: poolAddress,
-        abi: lendingPoolABI,
-        functionName: 'userPositions',
-        args: [userAddress || zeroAddress],
-    });
-
+    // User-specific data if user is connected
     const { data: userSupplyShares } = useReadContract({
         address: poolAddress,
         abi: lendingPoolABI,
         functionName: 'userSupplyShares',
         args: [userAddress || zeroAddress],
+        query: {
+            enabled: !!userAddress,
+        }
     });
 
     // Supply functionality
-    const { writeContract: writeSupply, isPending: isSupplyPending } = useWriteContract();
+    const { writeContract, isPending: isSupplyPending } = useWriteContract();
 
     const supply = useCallback(async (amount: bigint) => {
         try {
-            return await writeSupply({
+            return await writeContract({
                 address: poolAddress,
                 abi: lendingPoolABI,
                 functionName: 'supply',
@@ -93,7 +71,7 @@ export function useLendingPool(poolAddress: Address) {
             console.error('Error supplying to pool:', err);
             throw err;
         }
-    }, [writeSupply, poolAddress]);
+    }, [writeContract, poolAddress]);
 
     // Withdraw functionality
     const { writeContract: writeWithdraw, isPending: isWithdrawPending } = useWriteContract();
@@ -112,140 +90,30 @@ export function useLendingPool(poolAddress: Address) {
         }
     }, [writeWithdraw, poolAddress]);
 
-    // Margin position functionality
-    const { writeContract: writeRegisterPosition, isPending: isRegisteringPosition } = useWriteContract();
-
-    const registerPosition = useCallback(async (onBehalf: Address) => {
-        try {
-            return await writeRegisterPosition({
-                address: poolAddress,
-                abi: lendingPoolABI,
-                functionName: 'registerPosition',
-                args: [onBehalf],
-            });
-        } catch (err) {
-            console.error('Error registering position:', err);
-            throw err;
-        }
-    }, [writeRegisterPosition, poolAddress]);
-
-    // Supply collateral by position
-    const { writeContract: writeSupplyCollateral, isPending: isSupplyingCollateral } = useWriteContract();
-
-    const supplyCollateral = useCallback(async (onBehalf: Address, amount: bigint) => {
-        try {
-            return await writeSupplyCollateral({
-                address: poolAddress,
-                abi: lendingPoolABI,
-                functionName: 'supplyCollateralByPosition',
-                args: [onBehalf, amount],
-            });
-        } catch (err) {
-            console.error('Error supplying collateral:', err);
-            throw err;
-        }
-    }, [writeSupplyCollateral, poolAddress]);
-
-    // Borrow by position
-    const { writeContract: writeBorrowByPosition, isPending: isBorrowingByPosition } = useWriteContract();
-
-    const borrowByPosition = useCallback(async (onBehalf: Address, amount: bigint) => {
-        try {
-            return await writeBorrowByPosition({
-                address: poolAddress,
-                abi: lendingPoolABI,
-                functionName: 'borrowByPosition',
-                args: [onBehalf, amount],
-            });
-        } catch (err) {
-            console.error('Error borrowing by position:', err);
-            throw err;
-        }
-    }, [writeBorrowByPosition, poolAddress]);
-
-    // Repay by position
-    const { writeContract: writeRepayByPosition, isPending: isRepayingByPosition } = useWriteContract();
-
-    const repayByPosition = useCallback(async (onBehalf: Address, shares: bigint) => {
-        try {
-            return await writeRepayByPosition({
-                address: poolAddress,
-                abi: lendingPoolABI,
-                functionName: 'repayByPosition',
-                args: [onBehalf, shares],
-            });
-        } catch (err) {
-            console.error('Error repaying position:', err);
-            throw err;
-        }
-    }, [writeRepayByPosition, poolAddress]);
-
-    // Withdraw collateral by position
-    const { writeContract: writeWithdrawCollateral, isPending: isWithdrawingCollateral } = useWriteContract();
-
-    const withdrawCollateral = useCallback(async (onBehalf: Address, amount: bigint) => {
-        try {
-            return await writeWithdrawCollateral({
-                address: poolAddress,
-                abi: lendingPoolABI,
-                functionName: 'withdrawCollateralByPosition',
-                args: [onBehalf, amount],
-            });
-        } catch (err) {
-            console.error('Error withdrawing collateral:', err);
-            throw err;
-        }
-    }, [writeWithdrawCollateral, poolAddress]);
-
-    // Unregister position
-    const { writeContract: writeUnregisterPosition, isPending: isUnregisteringPosition } = useWriteContract();
-
-    const unregisterPosition = useCallback(async (onBehalf: Address) => {
-        try {
-            return await writeUnregisterPosition({
-                address: poolAddress,
-                abi: lendingPoolABI,
-                functionName: 'unregisterPosition',
-                args: [onBehalf],
-            });
-        } catch (err) {
-            console.error('Error unregistering position:', err);
-            throw err;
-        }
-    }, [writeUnregisterPosition, poolAddress]);
+    // Combine errors
+    const error = supplyError || borrowError || interestRateError;
+    const isLoading = isLoadingSupply || isLoadingBorrow || isLoadingInterestRate;
 
     return {
-        // Read values
+        // Pool data
         totalSupplyAssets,
         totalSupplyShares,
         totalBorrowAssets,
         totalBorrowShares,
-        totalCollateral,
         interestRate,
         ltp,
-        positionType,
-        utilizationRate,
-        userPosition,
+        
+        // User data
         userSupplyShares,
-
-        // Write functions
+        
+        // Actions
         supply,
         withdraw,
-        registerPosition,
-        supplyCollateral,
-        borrowByPosition,
-        repayByPosition,
-        withdrawCollateral,
-        unregisterPosition,
-
-        // Loading states
+        
+        // Loading and error states
+        isLoading,
+        error,
         isSupplyPending,
         isWithdrawPending,
-        isRegisteringPosition,
-        isSupplyingCollateral,
-        isBorrowingByPosition,
-        isRepayingByPosition,
-        isWithdrawingCollateral,
-        isUnregisteringPosition,
     };
 }

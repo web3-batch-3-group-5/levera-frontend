@@ -2,16 +2,24 @@
 
 import { Address } from 'viem';
 import { lendingPoolFactoryABI } from '@/lib/abis/lendingPoolFactory';
+import { lendingPoolABI } from '@/lib/abis/lendingPool';
 import { positionFactoryABI } from '@/lib/abis/positionFactory';
+import { positionABI } from '@/lib/abis/position';
 
 export const CONTRACTS = {
     LENDING_POOL_FACTORY: {
-        address: "0xc25482F6A71191A79E9ccd54205D66a9091DA5Fe" as Address,
+        address: "0x4e0524Bd8cE75de87f15B08CFc13B3cBF7B388Bf" as Address,
         abi: lendingPoolFactoryABI,
     },
     POSITION_FACTORY: {
-        address: "0x9799D2863dE4e0d203C7791d31354eE55169CE52" as Address,
+        address: "0x7bf71912432c89f154f6a5c6b029d6ea046ecc91" as Address,
         abi: positionFactoryABI,
+    },
+    LENDING_POOL: {
+        abi: lendingPoolABI,
+    },
+    POSITION: {
+        abi: positionABI,
     },
 } as const;
 

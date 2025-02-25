@@ -25,7 +25,7 @@ const initialFormData: FormData = {
     loanTokenUsdDataFeed: '',
     collateralTokenUsdDataFeed: '',
     liquidationThresholdPercentage: '80', // Default 80%, representing 0.8
-    interestRate: '500', // Default 5%, represented as 500 basis points
+    interestRate: '5', // Default 5%, represented as 500 basis points
     positionType: PositionType.LONG, // Default to LONG position
 };
 
@@ -277,7 +277,7 @@ export default function CreatePoolPage() {
 
                             <div>
                                 <label className="block text-sm font-medium mb-2">
-                                    Interest Rate (basis points)
+                                    Interest Rate (%)
                                 </label>
                                 <input
                                     type="number"
@@ -285,14 +285,14 @@ export default function CreatePoolPage() {
                                     value={formData.interestRate}
                                     onChange={handleInputChange}
                                     min="0"
-                                    max="10000"
-                                    placeholder="500"
+                                    max="100"
+                                    placeholder="5"
                                     className="w-full px-4 py-2 bg-background border rounded-md"
                                     required
                                     disabled={isPending || isConfirming}
                                 />
                                 <p className="text-xs text-muted-foreground mt-1">
-                                    The interest rate in basis points (e.g., 500 means 5%)
+                                    The interest rate precentage (e.g., 5 means 5%)
                                 </p>
                             </div>
 
