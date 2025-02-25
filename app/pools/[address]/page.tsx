@@ -8,6 +8,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Address, formatUnits } from 'viem';
 import { useRouter } from 'next/navigation';
 import { formatAddress } from '@/lib/utils';
+import { useAccount } from 'wagmi';
 
 // Helper function to format decimals consistently
 const formatTokenAmount = (amount: bigint | undefined, decimals: number = 18) => {
@@ -28,6 +29,7 @@ const formatPercentage = (value: number) => {
 export default function PoolDetailsPage() {
     const params = useParams();
     const router = useRouter();
+    const { address } = useAccount();
     const poolAddress = params.address as Address;
 
     const { poolAddresses, pools } = useLendingPoolFactory();
@@ -39,10 +41,15 @@ export default function PoolDetailsPage() {
         totalSupplyShares,
         totalBorrowAssets,
         totalBorrowShares,
-        borrowRate,
+        interestRate,
         isSupplyPending,
         isWithdrawPending,
     } = useLendingPool(poolAddress);
+
+    // Calculate utilization rate
+    const utilizationRate = totalSupplyAssets && totalSupplyAssets > 0n
+        ? (Number(totalBorrowAssets) / Number(totalSupplyAssets)) * 100
+        : 0;
 
     if (!pool) {
         return (
@@ -57,11 +64,6 @@ export default function PoolDetailsPage() {
             </div>
         );
     }
-
-    // Calculate utilization rate
-    const utilizationRate = totalSupplyAssets && totalSupplyAssets > 0n
-        ? (Number(totalBorrowAssets) / Number(totalSupplyAssets)) * 100
-        : 0;
 
     return (
         <main className="container mx-auto px-4 py-8">
@@ -120,9 +122,9 @@ export default function PoolDetailsPage() {
                     </div>
 
                     <div className="bg-card rounded-lg border p-6">
-                        <h3 className="text-sm text-muted-foreground mb-2">Borrow Rate</h3>
+                        <h3 className="text-sm text-muted-foreground mb-2">Interest Rate</h3>
                         <p className="text-2xl font-bold">
-                            {borrowRate ? formatPercentage(Number(borrowRate)) : '0.00%'}
+                            {interestRate ? (Number(interestRate) / 100).toFixed(2) : '0.00'}%
                         </p>
                     </div>
 
@@ -131,45 +133,6 @@ export default function PoolDetailsPage() {
                         <p className="text-2xl font-bold">
                             {formatPercentage(utilizationRate)}
                         </p>
-                    </div>
-                </div>
-
-                {/* Token Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-card rounded-lg border p-6">
-                        <h3 className="text-lg font-semibold mb-4">Loan Token</h3>
-                        <div className="space-y-2">
-                            <p className="text-sm">
-                                <span className="text-muted-foreground">Name:</span> {pool.loanTokenName}
-                            </p>
-                            <p className="text-sm">
-                                <span className="text-muted-foreground">Symbol:</span> {pool.loanTokenSymbol}
-                            </p>
-                            <p className="text-sm">
-                                <span className="text-muted-foreground">Address:</span>{' '}
-                                <code className="text-xs bg-muted px-1 py-0.5 rounded">
-                                    {formatAddress(pool.loanToken)}
-                                </code>
-                            </p>
-                        </div>
-                    </div>
-
-                    <div className="bg-card rounded-lg border p-6">
-                        <h3 className="text-lg font-semibold mb-4">Collateral Token</h3>
-                        <div className="space-y-2">
-                            <p className="text-sm">
-                                <span className="text-muted-foreground">Name:</span> {pool.collateralTokenName}
-                            </p>
-                            <p className="text-sm">
-                                <span className="text-muted-foreground">Symbol:</span> {pool.collateralTokenSymbol}
-                            </p>
-                            <p className="text-sm">
-                                <span className="text-muted-foreground">Address:</span>{' '}
-                                <code className="text-xs bg-muted px-1 py-0.5 rounded">
-                                    {formatAddress(pool.collateralToken)}
-                                </code>
-                            </p>
-                        </div>
                     </div>
                 </div>
 
@@ -186,7 +149,7 @@ export default function PoolDetailsPage() {
                     <Button
                         size="lg"
                         variant="outline"
-                        onClick={() => router.push(`/pools/${poolAddress}/borrow`)}
+                        onClick={() => router.push(`/pools/${poolAddress}/withdraw`)}
                         disabled={!pool.isActive || isWithdrawPending}
                         className="flex-1"
                     >

@@ -2,37 +2,12 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { useReadContracts, useWriteContract } from 'wagmi';
-import { CONTRACTS, PositionType } from '@/config/contracts';
+import { useReadContract, useReadContracts, useWriteContract } from 'wagmi';
+import { CONTRACTS } from '@/config/contracts';
 import { Address, parseUnits } from 'viem';
 import { toast } from 'sonner';
-
-// Types
-export interface CreateLendingPoolParams {
-    loanToken: Address;
-    collateralToken: Address;
-    loanTokenUsdDataFeed: Address;
-    collateralTokenUsdDataFeed: Address;
-    liquidationThresholdPercentage: string; // Value as percentage (e.g., "80" for 80%)
-    interestRate: string; // Value in basis points (e.g., "500" for 5%)
-    positionType: PositionType;
-}
-
-export interface PoolDetails {
-    loanToken: Address;
-    collateralToken: Address;
-    loanTokenUsdDataFeed: Address;
-    collateralTokenUsdDataFeed: Address;
-    loanTokenName: string;
-    collateralTokenName: string;
-    loanTokenSymbol: string;
-    collateralTokenSymbol: string;
-    creator: Address;
-    liquidationThresholdPercentage: bigint;
-    interestRate: bigint;
-    positionType: PositionType;
-    isActive: boolean;
-}
+import { lendingPoolABI } from '@/lib/abis/lendingPool';
+import { CreateLendingPoolParams, PoolDetails, PositionType } from '@/lib/types/contracts';
 
 export function useLendingPoolFactory() {
     console.log('useLendingPoolFactory hook initialized');
@@ -59,6 +34,68 @@ export function useLendingPoolFactory() {
         })),
         query: {
             staleTime: 60 * 1000, // 1 minute
+        }
+    });
+
+    // Get pool status (active/inactive)
+    const { data: poolStatusesData } = useReadContracts({
+        contracts: poolAddresses.map(address => ({
+            address: CONTRACTS.LENDING_POOL_FACTORY.address,
+            abi: CONTRACTS.LENDING_POOL_FACTORY.abi,
+            functionName: 'lendingPools',
+            args: [address],
+        })),
+        query: {
+            enabled: poolAddresses.length > 0,
+        }
+    });
+
+    // Get pool basic details
+    const { data: poolDetailsData } = useReadContracts({
+        contracts: poolAddresses.flatMap(address => [
+            {
+                address,
+                abi: lendingPoolABI,
+                functionName: 'loanToken',
+            },
+            {
+                address,
+                abi: lendingPoolABI,
+                functionName: 'collateralToken',
+            },
+            {
+                address,
+                abi: lendingPoolABI,
+                functionName: 'loanTokenUsdDataFeed',
+            },
+            {
+                address,
+                abi: lendingPoolABI,
+                functionName: 'collateralTokenUsdDataFeed',
+            },
+            {
+                address,
+                abi: lendingPoolABI,
+                functionName: 'creator',
+            },
+            {
+                address,
+                abi: lendingPoolABI,
+                functionName: 'interestRate',
+            },
+            {
+                address,
+                abi: lendingPoolABI,
+                functionName: 'ltp',
+            },
+            {
+                address,
+                abi: lendingPoolABI,
+                functionName: 'positionType',
+            },
+        ]),
+        query: {
+            enabled: poolAddresses.length > 0,
         }
     });
 
@@ -89,10 +126,6 @@ export function useLendingPoolFactory() {
             }
 
             setPoolAddresses(validPools);
-
-            // Get details for each pool
-            fetchPoolDetails(validPools);
-
         } catch (err) {
             console.error('Error processing pool addresses:', err);
             setError(err instanceof Error ? err : new Error('Failed to process pool addresses'));
@@ -102,37 +135,46 @@ export function useLendingPoolFactory() {
         }
     }, [potentialPools]);
 
-    // Function to fetch details for each pool
-    const fetchPoolDetails = async (addresses: Address[]) => {
-        console.log('Fetching details for pools:', addresses);
+    // Process the pool details once we have the addresses and data
+    useEffect(() => {
+        if (!poolDetailsData || !poolAddresses.length) {
+            return;
+        }
 
         try {
-            // Check if each pool is active
-            addresses.map(address => ({
-                address: CONTRACTS.LENDING_POOL_FACTORY.address,
-                abi: CONTRACTS.LENDING_POOL_FACTORY.abi,
-                functionName: 'lendingPools',
-                args: [address],
-            }));
-
-            const poolDetailsArray: PoolDetails[] = addresses.map((address) => {
-                // Generate deterministic values based on the address for consistency
+            const poolArray: PoolDetails[] = poolAddresses.map((address, index) => {
+                const baseIndex = index * 8; // 8 property queries per pool
+                
+                // Safely extract results, handling potential failures
+                const getResult = <T>(idx: number, defaultValue: T): T => {
+                    const response = poolDetailsData[baseIndex + idx];
+                    return response?.status === 'success' ? response.result as T : defaultValue;
+                };
+                
+                const loanToken = getResult<Address>(0, '0x0000000000000000000000000000000000000000' as Address);
+                const collateralToken = getResult<Address>(1, '0x0000000000000000000000000000000000000000' as Address);
+                const loanTokenUsdDataFeed = getResult<Address>(2, '0x0000000000000000000000000000000000000000' as Address);
+                const collateralTokenUsdDataFeed = getResult<Address>(3, '0x0000000000000000000000000000000000000000' as Address);
+                const creator = getResult<Address>(4, '0x0000000000000000000000000000000000000000' as Address);
+                const interestRate = getResult<bigint>(5, 500n);
+                const liquidationThresholdPercentage = getResult<bigint>(6, 80n);
+                const positionType = getResult<PositionType>(7, PositionType.LONG);
+                
+                // For token symbols and names, we would need to query them separately
+                // But for now, we'll use mock data based on address hash
                 const addressHash = parseInt(address.slice(2, 10), 16);
-                const isEven = addressHash % 2 === 0;
-
-                // Choose tokens based on the hash of the address
+                
                 const pairs = [
                     { loan: 'USDC', collateral: 'ETH' },
                     { loan: 'DAI', collateral: 'BTC' },
                     { loan: 'USDT', collateral: 'LINK' },
                     { loan: 'WETH', collateral: 'MATIC' }
                 ];
-
+                
                 const pairIndex = addressHash % pairs.length;
                 const selectedPair = pairs[pairIndex];
-
-                // Full names for tokens
-                const tokenFullNames = {
+                
+                const tokenFullNames: Record<string, string> = {
                     'USDC': 'USD Coin',
                     'DAI': 'Dai Stablecoin',
                     'USDT': 'Tether USD',
@@ -142,45 +184,48 @@ export function useLendingPoolFactory() {
                     'LINK': 'Chainlink',
                     'MATIC': 'Polygon'
                 };
-
+                
+                // Check if the pool is active
+                const isActive = poolStatusesData && 
+                    poolStatusesData[index]?.status === 'success' && 
+                    Boolean(poolStatusesData[index]?.result);
+                
                 return {
-                    loanToken: `0x${(addressHash * 2 + 1).toString(16).padStart(40, '0')}` as Address,
-                    collateralToken: `0x${(addressHash * 2 + 2).toString(16).padStart(40, '0')}` as Address,
-                    loanTokenUsdDataFeed: `0x${(addressHash * 3 + 1).toString(16).padStart(40, '0')}` as Address,
-                    collateralTokenUsdDataFeed: `0x${(addressHash * 3 + 2).toString(16).padStart(40, '0')}` as Address,
+                    loanToken,
+                    collateralToken,
+                    loanTokenUsdDataFeed,
+                    collateralTokenUsdDataFeed,
                     loanTokenName: tokenFullNames[selectedPair.loan],
                     loanTokenSymbol: selectedPair.loan,
                     collateralTokenName: tokenFullNames[selectedPair.collateral],
                     collateralTokenSymbol: selectedPair.collateral,
-                    creator: address,
-                    liquidationThresholdPercentage: BigInt(isEven ? 80 : 75),
-                    interestRate: BigInt(isEven ? 500 : 450),
-                    positionType: isEven ? PositionType.LONG : PositionType.SHORT,
-                    isActive: true // We'd get this from the lendingPools mapping in production
+                    creator,
+                    liquidationThresholdPercentage,
+                    interestRate,
+                    positionType,
+                    isActive: isActive !== undefined ? isActive : true
                 };
             });
 
-            console.log('Generated pool details:', poolDetailsArray);
-            setPools(poolDetailsArray);
+            console.log('Processed pool details:', poolArray);
+            setPools(poolArray);
+            setIsLoading(false);
             setError(null);
         } catch (err) {
-            console.error('Error fetching pool details:', err);
-            setError(err instanceof Error ? err : new Error('Failed to fetch pool details'));
-
-            // Use mock data if real data fails
-            createMockPoolData();
-        } finally {
-            setIsLoading(false);
-            setLastRefreshed(new Date());
+            console.error('Error processing pool details data:', err);
+            setError(err instanceof Error ? err : new Error('Failed to process pool details'));
+            
+            // Use mock data if processing fails
+            createMockPoolData(poolAddresses);
         }
-    };
+    }, [poolDetailsData, poolStatusesData, poolAddresses]);
 
     // Function to create mock data for development/fallback
-    const createMockPoolData = () => {
+    const createMockPoolData = useCallback((addresses?: Address[]) => {
         console.log('Creating mock pool data');
-        const count = 3;
+        const count = addresses?.length || 3;
 
-        const mockAddresses: Address[] = Array.from(
+        const mockAddresses: Address[] = addresses || Array.from(
             { length: count },
             (_, i) => `0x${(i + 1).toString(16).padStart(40, '0')}` as Address
         );
@@ -192,14 +237,28 @@ export function useLendingPoolFactory() {
             const loanIndex = index % loanTokenOptions.length;
             const collateralIndex = index % collateralTokenOptions.length;
 
+            const loanTokenFullNames: Record<string, string> = {
+                'USDC': 'USD Coin',
+                'DAI': 'Dai Stablecoin',
+                'USDT': 'Tether USD',
+                'WETH': 'Wrapped Ether'
+            };
+
+            const collateralTokenFullNames: Record<string, string> = {
+                'ETH': 'Ethereum',
+                'WBTC': 'Wrapped Bitcoin',
+                'LINK': 'Chainlink',
+                'MATIC': 'Polygon'
+            };
+
             return {
                 loanToken: `0x${(index * 2 + 1).toString(16).padStart(40, '0')}` as Address,
                 collateralToken: `0x${(index * 2 + 2).toString(16).padStart(40, '0')}` as Address,
                 loanTokenUsdDataFeed: `0x${(index * 3 + 1).toString(16).padStart(40, '0')}` as Address,
                 collateralTokenUsdDataFeed: `0x${(index * 3 + 2).toString(16).padStart(40, '0')}` as Address,
-                loanTokenName: ['USD Coin', 'Dai Stablecoin', 'Tether USD', 'Wrapped Ether'][loanIndex],
+                loanTokenName: loanTokenFullNames[loanTokenOptions[loanIndex]],
                 loanTokenSymbol: loanTokenOptions[loanIndex],
-                collateralTokenName: ['Ethereum', 'Bitcoin', 'Chainlink', 'Polygon'][collateralIndex],
+                collateralTokenName: collateralTokenFullNames[collateralTokenOptions[collateralIndex]],
                 collateralTokenSymbol: collateralTokenOptions[collateralIndex],
                 creator: "0x7777777777777777777777777777777777777777" as Address,
                 liquidationThresholdPercentage: 80n,
@@ -216,7 +275,7 @@ export function useLendingPoolFactory() {
         setPools(mockPools);
         setIsLoading(false);
         setLastRefreshed(new Date());
-    };
+    }, []);
 
     // Refresh function to manually trigger data refetch
     const refresh = useCallback(async () => {
@@ -244,9 +303,6 @@ export function useLendingPoolFactory() {
         console.log('Creating lending pool with params:', params);
 
         try {
-            const liquidationThreshold = parseUnits(params.liquidationThresholdPercentage, 0);
-            const interestRate = parseUnits(params.interestRate, 0);
-
             const hash = await writeContract({
                 address: CONTRACTS.LENDING_POOL_FACTORY.address,
                 abi: CONTRACTS.LENDING_POOL_FACTORY.abi,
@@ -256,8 +312,8 @@ export function useLendingPoolFactory() {
                     params.collateralToken,
                     params.loanTokenUsdDataFeed,
                     params.collateralTokenUsdDataFeed,
-                    liquidationThreshold,
-                    interestRate,
+                    params.liquidationThresholdPercentage,
+                    params.interestRate,
                     params.positionType
                 ],
             });
@@ -297,7 +353,7 @@ export function useLendingPoolFactory() {
         return exists;
     }, [pools]);
 
-    // Final debug log of state
+    // Debug logging
     useEffect(() => {
         console.log('=== LENDING POOL FACTORY STATE ===');
         console.log('Pools:', pools);
