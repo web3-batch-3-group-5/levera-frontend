@@ -2,19 +2,17 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Address, parseUnits, formatUnits, zeroAddress, Hash } from 'viem';
-import { useLendingPool } from '@/hooks/useLendingPool';
-import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
-import { useAccount, useConfig } from 'wagmi';
-import { getPublicClient } from '@wagmi/core';
+import { Address, parseUnits, formatUnits, zeroAddress } from 'viem';
+import { useAccount } from 'wagmi';
 import { Button } from '@/components/shared/Button';
 import { ArrowLeft } from 'lucide-react';
 import { formatAddress } from '@/lib/utils';
-import { useReadContract, useWriteContract } from 'wagmi';
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { erc20Abi } from 'viem';
 import { toast } from 'sonner';
+import { lendingPoolABI } from '@/lib/abis/lendingPool';
+import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
 
-// Helper function to format token amounts
 const formatTokenAmount = (amount: bigint | undefined, decimals: number = 18) => {
     if (!amount) return '0.00';
     return Number(formatUnits(amount, decimals)).toLocaleString(undefined, {
@@ -26,29 +24,27 @@ const formatTokenAmount = (amount: bigint | undefined, decimals: number = 18) =>
 export default function SupplyPage() {
     const params = useParams();
     const router = useRouter();
-    const config = useConfig();
     const { address: userAddress } = useAccount();
     const poolAddress = params.address as Address;
 
+    // State management
     const [amount, setAmount] = useState('');
-    const [needsApproval, setNeedsApproval] = useState(false);
-    const [isApproving, setIsApproving] = useState(false);
-    const [isSupplying, setIsSupplying] = useState(false);
     const [supplyAmount, setSupplyAmount] = useState<bigint>(0n);
+    const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
+    const [needsApproval, setNeedsApproval] = useState(false);
 
     // Get pool details
     const { poolAddresses, pools } = useLendingPoolFactory();
     const poolIndex = poolAddresses.findIndex(addr => addr.toLowerCase() === poolAddress.toLowerCase());
     const pool = poolIndex !== -1 ? pools[poolIndex] : undefined;
 
-    // Get pool stats and supply function
-    const {
-        totalSupplyAssets,
-        totalSupplyShares,
-        supply,
-    } = useLendingPool(poolAddress);
+    // Contract state
+    const { writeContract, isPending: isSupplyPending } = useWriteContract();
+    const { data: receipt, isLoading: isConfirming } = useWaitForTransactionReceipt({
+        hash: txHash,
+    });
 
-    // Check token balance
+    // Check token balance and allowance
     const { data: tokenBalance } = useReadContract({
         address: pool?.loanToken,
         abi: erc20Abi,
@@ -56,7 +52,6 @@ export default function SupplyPage() {
         args: [userAddress || zeroAddress],
     });
 
-    // Check token allowance
     const { data: currentAllowance } = useReadContract({
         address: pool?.loanToken,
         abi: erc20Abi,
@@ -64,77 +59,18 @@ export default function SupplyPage() {
         args: [userAddress || zeroAddress, poolAddress],
     });
 
-    // Setup write contract
-    const { writeContract } = useWriteContract();
+    // Watch for transaction completion
+    useEffect(() => {
+        console.log('Transaction state:', { receipt, txHash, isConfirming });
 
-    const handleApprove = async () => {
-        if (!pool || !supplyAmount) return;
-
-        try {
-            setIsApproving(true);
-
-            const hash = await writeContract({
-                address: pool.loanToken,
-                abi: erc20Abi,
-                functionName: 'approve',
-                args: [poolAddress, supplyAmount],
-            });
-
-            if (hash) {
-                toast.loading('Approving token...');
-                const publicClient = getPublicClient(config);
-
-                if (publicClient) {
-                    await publicClient.waitForTransactionReceipt({
-                        hash: hash as Hash,
-                    });
-                    toast.success('Token approved successfully!');
-                    setNeedsApproval(false);
-                }
-            }
-        } catch (error) {
-            console.error('Error approving token:', error);
-            toast.error('Failed to approve token');
-        } finally {
-            setIsApproving(false);
+        if (receipt?.status === 'success') {
+            toast.dismiss('tx-confirm');
+            toast.success(`Successfully supplied ${formatTokenAmount(supplyAmount)} ${pool?.loanTokenSymbol}!`);
+            router.push(`/pools/${poolAddress}`);
         }
-    };
+    }, [receipt, router, supplyAmount, pool?.loanTokenSymbol, poolAddress, txHash, isConfirming]);
 
-    const handleSupply = async () => {
-        if (!supplyAmount || !pool) return;
-
-        try {
-            setIsSupplying(true);
-
-            const result = await supply(supplyAmount);
-
-            if (result) {
-                toast.loading('Supplying tokens...');
-                const publicClient = getPublicClient(config);
-
-                if (publicClient) {
-                    const hash = result as Hash;
-                    const receipt = await publicClient.waitForTransactionReceipt({
-                        hash
-                    });
-
-                    if (receipt.status === 'success') {
-                        toast.success(`Successfully supplied ${formatTokenAmount(supplyAmount)} ${pool.loanTokenSymbol}!`);
-                        router.push(`/pools/${poolAddress}`);
-                    } else {
-                        throw new Error('Transaction failed');
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Error supplying tokens:', error);
-            toast.error('Failed to supply tokens');
-        } finally {
-            setIsSupplying(false);
-        }
-    };
-
-    // Check if approval is needed whenever amount changes
+    // Check if approval is needed
     useEffect(() => {
         if (!amount || !currentAllowance || !pool) return;
 
@@ -146,6 +82,81 @@ export default function SupplyPage() {
             console.error('Error checking allowance:', error);
         }
     }, [amount, currentAllowance, pool]);
+
+    // Handle token approval
+    const handleApprove = async () => {
+        if (!pool || !supplyAmount) return;
+
+        try {
+            toast.loading('Please confirm the approval in your wallet...', { id: 'approve-confirm' });
+
+            writeContract({
+                address: pool.loanToken,
+                abi: erc20Abi,
+                functionName: 'approve',
+                args: [poolAddress, supplyAmount],
+            }, {
+                onSuccess: (hash) => {
+                    console.log('Approval transaction hash:', hash);
+                    toast.dismiss('approve-confirm');
+                    toast.success('Token approved successfully!');
+                    setNeedsApproval(false);
+                },
+                onError: (error) => {
+                    console.error('Approval Error:', error);
+                    toast.dismiss('approve-confirm');
+                    toast.error('Failed to approve token');
+                },
+            });
+        } catch (error) {
+            console.error('Error in approval process:', error);
+            toast.dismiss('approve-confirm');
+            toast.error('Failed to approve token');
+        }
+    };
+
+    // Handle supply
+    const handleSupply = async () => {
+        if (!supplyAmount || !pool) {
+            console.log('Supply validation failed:', { supplyAmount: supplyAmount.toString(), pool });
+            return;
+        }
+
+        try {
+            console.log('Preparing supply transaction:', {
+                amount: supplyAmount.toString(),
+                poolAddress,
+                userAddress
+            });
+
+            toast.loading('Please confirm the transaction...', { id: 'tx-confirm' });
+
+            writeContract({
+                address: poolAddress,
+                abi: lendingPoolABI,
+                functionName: 'supply',
+                args: [supplyAmount],
+            }, {
+                onSuccess: (hash) => {
+                    console.log('Supply transaction hash:', hash);
+                    setTxHash(hash);
+                    toast.dismiss('tx-confirm');
+                    toast.loading('Transaction submitted, waiting for confirmation...', {
+                        id: 'tx-confirm'
+                    });
+                },
+                onError: (error) => {
+                    console.error('Supply Error:', error);
+                    toast.dismiss('tx-confirm');
+                    toast.error('Failed to supply tokens');
+                },
+            });
+        } catch (error) {
+            console.error('Error in supply process:', error);
+            toast.dismiss('tx-confirm');
+            toast.error('Failed to supply tokens');
+        }
+    };
 
     if (!pool) {
         return (
@@ -197,6 +208,7 @@ export default function SupplyPage() {
                                     onChange={(e) => setAmount(e.target.value)}
                                     placeholder="0.00"
                                     className="w-full px-4 py-2 bg-background border rounded-md"
+                                    disabled={isSupplyPending || isConfirming}
                                 />
                                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                                     <button
@@ -206,8 +218,8 @@ export default function SupplyPage() {
                                         MAX
                                     </button>
                                     <span className="text-sm text-muted-foreground">
-                    {pool.loanTokenSymbol}
-                  </span>
+                                        {pool.loanTokenSymbol}
+                                    </span>
                                 </div>
                             </div>
                             <p className="text-sm text-muted-foreground mt-1">
@@ -220,14 +232,12 @@ export default function SupplyPage() {
                                 <span className="text-muted-foreground">Pool Address</span>
                                 <span className="font-mono">{formatAddress(poolAddress)}</span>
                             </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Total Supply</span>
-                                <span>{formatTokenAmount(totalSupplyAssets)} {pool.loanTokenSymbol}</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Your Supply Shares</span>
-                                <span>{formatTokenAmount(totalSupplyShares)}</span>
-                            </div>
+                            {txHash && (
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Transaction</span>
+                                    <span className="font-mono">{formatAddress(txHash)}</span>
+                                </div>
+                            )}
                         </div>
 
                         {needsApproval ? (
@@ -235,18 +245,18 @@ export default function SupplyPage() {
                                 className="w-full"
                                 size="lg"
                                 onClick={handleApprove}
-                                disabled={!amount || isApproving}
+                                disabled={!amount || isSupplyPending}
                             >
-                                {isApproving ? 'Approving...' : 'Approve'}
+                                {isSupplyPending ? 'Approving...' : 'Approve'}
                             </Button>
                         ) : (
                             <Button
                                 className="w-full"
                                 size="lg"
                                 onClick={handleSupply}
-                                disabled={!amount || isSupplying}
+                                disabled={!amount || isSupplyPending || isConfirming}
                             >
-                                {isSupplying ? 'Supplying...' : 'Supply'}
+                                {isConfirming ? 'Confirming...' : isSupplyPending ? 'Supplying...' : 'Supply'}
                             </Button>
                         )}
                     </div>

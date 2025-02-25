@@ -4,86 +4,284 @@ import { useRouter } from 'next/navigation';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
 import { PoolCard } from '@/components/pools/PoolCard';
 import { Button } from '@/components/shared/Button';
-import { Plus, Search } from 'lucide-react';
-import { useState } from 'react';
+import { Plus, Search, RefreshCw, AlertTriangle } from 'lucide-react';
+import { useState, useEffect } from 'react';
 import { Address } from 'viem';
+import { useAccount } from 'wagmi';
 
 export default function PoolsPage() {
     const router = useRouter();
-    const { poolAddresses, pools, isLoading } = useLendingPoolFactory();
+    // Only destructure what we actually use
+    const { isConnected } = useAccount();
+    const { poolAddresses, pools, isLoading, error, refresh } = useLendingPoolFactory();
+
     const [searchTerm, setSearchTerm] = useState('');
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const [isClient, setIsClient] = useState(false);
+
+    // Debug logging
+    useEffect(() => {
+        console.log('=== POOLS PAGE DEBUG INFO ===');
+        console.log('isConnected:', isConnected);
+        console.log('poolAddresses:', poolAddresses);
+        console.log('pools:', pools);
+        console.log('isLoading:', isLoading);
+        console.log('error:', error);
+        console.log('isClient:', isClient);
+        console.log('===========================');
+    }, [isConnected, poolAddresses, pools, isLoading, error, isClient]);
+
+    // Fix for hydration mismatch - only set isClient to true after component mounts
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    // Handle manual refresh
+    const handleRefresh = async () => {
+        console.log('Manual refresh triggered');
+        setIsRefreshing(true);
+
+        try {
+            await refresh();
+            console.log('Refresh completed');
+        } catch (err) {
+            console.error('Refresh error:', err);
+        } finally {
+            setTimeout(() => setIsRefreshing(false), 500); // Minimum 500ms of loading state for UX
+        }
+    };
 
     const handleSupply = (poolAddress: Address) => {
+        console.log('Navigate to supply for pool:', poolAddress);
         router.push(`/pools/${poolAddress}/supply`);
     };
 
     const handleBorrow = (poolAddress: Address) => {
+        console.log('Navigate to borrow for pool:', poolAddress);
         router.push(`/pools/${poolAddress}/borrow`);
     };
 
+    const handleCreatePool = () => {
+        console.log('Create pool triggered, isConnected:', isConnected);
+        if (!isConnected) {
+            console.log('Not connected, showing connect wallet message');
+            // Show connect wallet message
+            return;
+        }
+        router.push('/pools/create');
+    };
+
     // Filter pools based on search term
-    const filteredPools = pools.filter((pool, index) =>
-        pool.loanTokenSymbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        pool.collateralTokenSymbol.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredPools = pools.filter((pool) => {
+        const matches = pool.loanTokenSymbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            pool.collateralTokenSymbol.toLowerCase().includes(searchTerm.toLowerCase());
+
+        if (searchTerm) {
+            console.log('Filtering pools by:', searchTerm);
+            console.log('Pool matches:', pool.loanTokenSymbol, pool.collateralTokenSymbol, matches);
+        }
+
+        return matches;
+    });
+
+    console.log('Rendering pools page, filtered pools:', filteredPools.length);
 
     return (
         <main className="flex-1">
             <div className="container mx-auto px-4 lg:px-8 py-8">
                 <div className="flex flex-col gap-6">
-                    <div className="flex items-center justify-between">
+                    {/* Header with Create Pool Button */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                         <div>
                             <h1 className="text-3xl font-bold">Lending Pools</h1>
                             <p className="text-muted-foreground mt-1">
                                 Supply assets to earn interest or borrow against your collateral
                             </p>
                         </div>
-                        <Button
-                            onClick={() => router.push('/pools/create')}
-                            className="gap-2"
-                        >
-                            <Plus className="size-4" />
-                            Create Pool
-                        </Button>
+                        {/* Only render button attributes on client to prevent hydration mismatch */}
+                        {isClient ? (
+                            <Button
+                                onClick={handleCreatePool}
+                                className="gap-2"
+                                disabled={!isConnected}
+                            >
+                                <Plus className="size-4" />
+                                Create Pool
+                            </Button>
+                        ) : (
+                            <Button
+                                onClick={handleCreatePool}
+                                className="gap-2"
+                            >
+                                <Plus className="size-4" />
+                                Create Pool
+                            </Button>
+                        )}
                     </div>
 
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                        <input
-                            type="text"
-                            placeholder="Search pools by token symbol..."
-                            className="w-full pl-10 pr-4 py-2 bg-background border rounded-md"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-                    </div>
-
-                    {isLoading ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {[...Array(6)].map((_, i) => (
-                                <div key={i} className="bg-card animate-pulse rounded-lg h-64" />
-                            ))}
+                    {/* Search and Refresh Controls */}
+                    <div className="flex flex-col sm:flex-row gap-4">
+                        <div className="relative flex-1">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                            <input
+                                type="text"
+                                placeholder="Search pools by token symbol..."
+                                className="w-full pl-10 pr-4 py-2 bg-background border rounded-md"
+                                value={searchTerm}
+                                onChange={(e) => {
+                                    console.log('Search changed:', e.target.value);
+                                    setSearchTerm(e.target.value);
+                                }}
+                            />
                         </div>
+                        {isClient ? (
+                            <Button
+                                variant="outline"
+                                className="gap-2"
+                                onClick={handleRefresh}
+                                disabled={isRefreshing}
+                            >
+                                <RefreshCw className={`size-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                                {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                            </Button>
+                        ) : (
+                            <Button
+                                variant="outline"
+                                className="gap-2"
+                                onClick={handleRefresh}
+                            >
+                                <RefreshCw className="size-4" />
+                                Refresh
+                            </Button>
+                        )}
+                    </div>
+
+                    {/* Error State */}
+                    {error && (
+                        <div className="bg-destructive/10 border border-destructive rounded-lg p-4 flex items-center gap-3">
+                            <AlertTriangle className="size-5 text-destructive flex-shrink-0" />
+                            <div>
+                                <h3 className="font-medium text-destructive">Error loading pools</h3>
+                                <p className="text-sm text-muted-foreground">
+                                    {error.message || 'An error occurred while loading the pools. Please try refreshing.'}
+                                </p>
+                            </div>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="ml-auto"
+                                onClick={handleRefresh}
+                            >
+                                Try Again
+                            </Button>
+                        </div>
+                    )}
+
+                    {/* Loading State */}
+                    {isLoading ? (
+                        <>
+                            <div className="text-sm text-muted-foreground">Loading pools...</div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                {[...Array(6)].map((_, i) => (
+                                    <div key={i} className="bg-card animate-pulse rounded-lg h-64 border">
+                                        <div className="p-6 space-y-4">
+                                            <div className="flex justify-between">
+                                                <div className="h-6 bg-muted rounded w-1/3"></div>
+                                                <div className="h-6 bg-muted rounded w-16"></div>
+                                            </div>
+                                            <div className="space-y-4">
+                                                <div className="grid grid-cols-2 gap-4">
+                                                    <div className="space-y-2">
+                                                        <div className="h-4 bg-muted rounded w-24"></div>
+                                                        <div className="h-5 bg-muted rounded w-20"></div>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div className="h-4 bg-muted rounded w-24"></div>
+                                                        <div className="h-5 bg-muted rounded w-20"></div>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div className="h-4 bg-muted rounded w-24"></div>
+                                                        <div className="h-5 bg-muted rounded w-20"></div>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <div className="h-4 bg-muted rounded w-24"></div>
+                                                        <div className="h-5 bg-muted rounded w-20"></div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </>
                     ) : !poolAddresses || poolAddresses.length === 0 ? (
+                        // Empty State
                         <div className="text-center py-12 border rounded-lg bg-card">
-                            <p className="text-muted-foreground">
-                                No lending pools available yet.
-                            </p>
+                            <div className="max-w-md mx-auto space-y-4">
+                                <h3 className="text-lg font-medium">No lending pools available yet</h3>
+                                <p className="text-muted-foreground">
+                                    {isClient && isConnected
+                                        ? "Be the first to create a lending pool and start earning interest."
+                                        : "Connect your wallet to create and interact with lending pools."}
+                                </p>
+                                {isClient && isConnected && (
+                                    <Button
+                                        onClick={() => {
+                                            console.log('Create first pool clicked');
+                                            router.push('/pools/create');
+                                        }}
+                                        className="gap-2"
+                                    >
+                                        <Plus className="size-4" />
+                                        Create First Pool
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                            {filteredPools.map((pool, index) => {
-                                const poolAddress = poolAddresses[index];
-                                return (
-                                    <PoolCard
-                                        key={poolAddress}
-                                        poolAddress={poolAddress}
-                                        pool={pool}
-                                        onSupply={() => handleSupply(poolAddress)}
-                                        onBorrow={() => handleBorrow(poolAddress)}
-                                    />
-                                );
-                            })}
+                        // Pool Grid
+                        <div>
+                            {/* Filtered Results Count */}
+                            {searchTerm && (
+                                <div className="mb-4 text-sm text-muted-foreground">
+                                    Showing {filteredPools.length} of {pools.length} pools
+                                </div>
+                            )}
+
+                            {/* No Search Results State */}
+                            {searchTerm && filteredPools.length === 0 ? (
+                                <div className="text-center py-12 border rounded-lg bg-card">
+                                    <p className="text-muted-foreground">
+                                        No pools match your search for "{searchTerm}"
+                                    </p>
+                                    <Button
+                                        variant="link"
+                                        onClick={() => {
+                                            console.log('Clear search clicked');
+                                            setSearchTerm('');
+                                        }}
+                                    >
+                                        Clear search
+                                    </Button>
+                                </div>
+                            ) : (
+                                // Pool Cards Grid
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {filteredPools.map((pool, index) => {
+                                        console.log('Rendering pool card:', index, pool.loanTokenSymbol, pool.collateralTokenSymbol);
+                                        const poolAddress = poolAddresses[index];
+                                        return (
+                                            <PoolCard
+                                                key={poolAddress}
+                                                poolAddress={poolAddress}
+                                                pool={pool}
+                                                onSupply={() => handleSupply(poolAddress)}
+                                                onBorrow={() => handleBorrow(poolAddress)}
+                                            />
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>

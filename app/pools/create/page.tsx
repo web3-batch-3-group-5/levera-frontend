@@ -1,85 +1,158 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/shared/Button';
 import { ArrowLeft } from 'lucide-react';
-import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
-import { Address, Hash } from 'viem';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { Address, parseUnits } from 'viem';
 import { toast } from 'sonner';
-import { useConfig } from 'wagmi';
-import { getPublicClient } from '@wagmi/core';
+import { CONTRACTS, PositionType } from '@/config/contracts';
+
+interface FormData {
+    loanToken: string;
+    collateralToken: string;
+    loanTokenUsdDataFeed: string;
+    collateralTokenUsdDataFeed: string;
+    liquidationThresholdPercentage: string;
+    interestRate: string;
+    positionType: PositionType;
+}
+
+const initialFormData: FormData = {
+    loanToken: '',
+    collateralToken: '',
+    loanTokenUsdDataFeed: '',
+    collateralTokenUsdDataFeed: '',
+    liquidationThresholdPercentage: '80', // Default 80%, representing 0.8
+    interestRate: '500', // Default 5%, represented as 500 basis points
+    positionType: PositionType.LONG, // Default to LONG position
+};
 
 export default function CreatePoolPage() {
     const router = useRouter();
-    const config = useConfig();
-    const { createLendingPool } = useLendingPoolFactory();
+    const [formData, setFormData] = useState<FormData>(initialFormData);
+    const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
 
-    const [isCreating, setIsCreating] = useState(false);
-    const [formData, setFormData] = useState({
-        loanToken: '',
-        collateralToken: '',
-        loanTokenUsdDataFeed: '',
-        collateralTokenUsdDataFeed: '',
+    // Contract write setup
+    const { writeContract, isPending } = useWriteContract();
+
+    // Transaction confirmation
+    const { isLoading: isConfirming, data: receipt } = useWaitForTransactionReceipt({
+        hash: txHash,
     });
+
+    // Watch for receipt and handle completion
+    useEffect(() => {
+        if (receipt?.status === 'success') {
+            toast.dismiss('tx-confirm');
+            toast.success('Pool created successfully!');
+            router.push('/pools');
+        }
+    }, [receipt, router]);
+
+    const validateAddresses = (data: FormData): boolean => {
+        const isValidAddress = (address: string) =>
+            address.startsWith('0x') && address.length === 42;
+
+        if (!isValidAddress(data.loanToken)) {
+            toast.error('Invalid loan token address');
+            return false;
+        }
+        if (!isValidAddress(data.collateralToken)) {
+            toast.error('Invalid collateral token address');
+            return false;
+        }
+        if (!isValidAddress(data.loanTokenUsdDataFeed)) {
+            toast.error('Invalid loan token price feed address');
+            return false;
+        }
+        if (!isValidAddress(data.collateralTokenUsdDataFeed)) {
+            toast.error('Invalid collateral token price feed address');
+            return false;
+        }
+        return true;
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        console.log('Form submitted', formData);
+
+        if (!validateAddresses(formData)) {
+            return;
+        }
 
         try {
-            setIsCreating(true);
-
-            // Validate addresses
-            if (!formData.loanToken.startsWith('0x') ||
-                !formData.collateralToken.startsWith('0x') ||
-                !formData.loanTokenUsdDataFeed.startsWith('0x') ||
-                !formData.collateralTokenUsdDataFeed.startsWith('0x')) {
-                toast.error('Please enter valid addresses');
-                return;
-            }
-
-            const result = await createLendingPool({
-                loanToken: formData.loanToken as Address,
-                collateralToken: formData.collateralToken as Address,
-                loanTokenUsdDataFeed: formData.loanTokenUsdDataFeed as Address,
-                collateralTokenUsdDataFeed: formData.collateralTokenUsdDataFeed as Address,
+            toast.loading('Please confirm the transaction in your wallet...', {
+                id: 'wallet-confirm'
             });
 
-            if (result) {
-                toast.loading('Creating pool...');
-                const publicClient = getPublicClient(config);
+            const liquidationThreshold = parseUnits(formData.liquidationThresholdPercentage, 0);
+            const interestRate = parseUnits(formData.interestRate, 0);
 
-                if (publicClient) {
-                    const receipt = await publicClient.waitForTransactionReceipt({
-                        hash: result as Hash
-                    });
-
-                    if (receipt.status === 'success') {
-                        toast.success('Pool created successfully!');
-                        // Only redirect after successful transaction confirmation
-                        setTimeout(() => {
-                            router.push('/pools');
-                            router.refresh(); // Refresh the pools page data
-                        }, 1000); // Small delay to ensure the success message is seen
-                    } else {
-                        throw new Error('Transaction failed');
-                    }
+            writeContract(
+                {
+                    address: CONTRACTS.LENDING_POOL_FACTORY.address,
+                    abi: CONTRACTS.LENDING_POOL_FACTORY.abi,
+                    functionName: 'createLendingPool',
+                    args: [
+                        formData.loanToken as Address,
+                        formData.collateralToken as Address,
+                        formData.loanTokenUsdDataFeed as Address,
+                        formData.collateralTokenUsdDataFeed as Address,
+                        liquidationThreshold,
+                        interestRate,
+                        formData.positionType,
+                    ],
+                },
+                {
+                    onSuccess: (hash) => {
+                        console.log('Transaction Hash:', hash);
+                        setTxHash(hash);
+                        toast.dismiss('wallet-confirm');
+                        toast.loading('Transaction submitted, waiting for confirmation...', {
+                            id: 'tx-confirm'
+                        });
+                    },
+                    onError: (error) => {
+                        console.error('Transaction Error:', error);
+                        toast.dismiss('wallet-confirm');
+                        toast.error('Failed to create pool: ' + error.message);
+                    },
                 }
+            );
+        } catch (error: unknown) {
+            console.error('Error details:', error);
+            toast.dismiss('wallet-confirm');
+
+            if (error && typeof error === 'object' && 'message' in error) {
+                const errorMessage = error.message as string;
+
+                if (errorMessage.toLowerCase().includes('rejected') ||
+                    errorMessage.toLowerCase().includes('denied') ||
+                    errorMessage.toLowerCase().includes('cancelled')) {
+                    toast.error('Transaction rejected in wallet');
+                } else {
+                    toast.error(`Failed to create pool: ${errorMessage}`);
+                }
+            } else {
+                toast.error('Failed to create pool: Unknown error');
             }
-        } catch (error) {
-            console.error('Error creating pool:', error);
-            toast.error('Failed to create pool');
-        } finally {
-            setIsCreating(false);
         }
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         const { name, value } = e.target;
         setFormData(prev => ({
             ...prev,
             [name]: value
         }));
+    };
+
+    const getButtonText = () => {
+        if (isPending) return 'Confirm in Wallet...';
+        if (isConfirming) return 'Creating Pool...';
+        return 'Create Pool';
     };
 
     return (
@@ -88,6 +161,7 @@ export default function CreatePoolPage() {
                 variant="ghost"
                 className="mb-6"
                 onClick={() => router.back()}
+                disabled={isPending || isConfirming}
             >
                 <ArrowLeft className="size-4 mr-2" />
                 Back to Pools
@@ -116,6 +190,7 @@ export default function CreatePoolPage() {
                                     placeholder="0x..."
                                     className="w-full px-4 py-2 bg-background border rounded-md"
                                     required
+                                    disabled={isPending || isConfirming}
                                 />
                                 <p className="text-xs text-muted-foreground mt-1">
                                     The token that will be supplied and borrowed
@@ -134,6 +209,7 @@ export default function CreatePoolPage() {
                                     placeholder="0x..."
                                     className="w-full px-4 py-2 bg-background border rounded-md"
                                     required
+                                    disabled={isPending || isConfirming}
                                 />
                                 <p className="text-xs text-muted-foreground mt-1">
                                     The token that will be used as collateral
@@ -152,6 +228,7 @@ export default function CreatePoolPage() {
                                     placeholder="0x..."
                                     className="w-full px-4 py-2 bg-background border rounded-md"
                                     required
+                                    disabled={isPending || isConfirming}
                                 />
                                 <p className="text-xs text-muted-foreground mt-1">
                                     Chainlink price feed address for the loan token
@@ -170,9 +247,72 @@ export default function CreatePoolPage() {
                                     placeholder="0x..."
                                     className="w-full px-4 py-2 bg-background border rounded-md"
                                     required
+                                    disabled={isPending || isConfirming}
                                 />
                                 <p className="text-xs text-muted-foreground mt-1">
                                     Chainlink price feed address for the collateral token
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-2">
+                                    Liquidation Threshold (%)
+                                </label>
+                                <input
+                                    type="number"
+                                    name="liquidationThresholdPercentage"
+                                    value={formData.liquidationThresholdPercentage}
+                                    onChange={handleInputChange}
+                                    min="1"
+                                    max="100"
+                                    placeholder="80"
+                                    className="w-full px-4 py-2 bg-background border rounded-md"
+                                    required
+                                    disabled={isPending || isConfirming}
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    The percentage threshold for liquidation (e.g., 80 means 0.8 or 80%)
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-2">
+                                    Interest Rate (basis points)
+                                </label>
+                                <input
+                                    type="number"
+                                    name="interestRate"
+                                    value={formData.interestRate}
+                                    onChange={handleInputChange}
+                                    min="0"
+                                    max="10000"
+                                    placeholder="500"
+                                    className="w-full px-4 py-2 bg-background border rounded-md"
+                                    required
+                                    disabled={isPending || isConfirming}
+                                />
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    The interest rate in basis points (e.g., 500 means 5%)
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-2">
+                                    Position Type
+                                </label>
+                                <select
+                                    name="positionType"
+                                    value={formData.positionType}
+                                    onChange={handleInputChange}
+                                    className="w-full px-4 py-2 bg-background border rounded-md"
+                                    required
+                                    disabled={isPending || isConfirming}
+                                >
+                                    <option value={PositionType.LONG}>Long</option>
+                                    <option value={PositionType.SHORT}>Short</option>
+                                </select>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                    The type of position this pool supports
                                 </p>
                             </div>
                         </div>
@@ -181,9 +321,9 @@ export default function CreatePoolPage() {
                             type="submit"
                             className="w-full"
                             size="lg"
-                            disabled={isCreating}
+                            disabled={isPending || isConfirming}
                         >
-                            {isCreating ? 'Creating Pool...' : 'Create Pool'}
+                            {getButtonText()}
                         </Button>
                     </form>
                 </div>
