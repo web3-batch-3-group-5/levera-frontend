@@ -20,7 +20,6 @@ interface PoolCardProps {
     poolAddress: Address;
     pool: PoolDetails;
     onSupply?: (poolAddress: Address) => void;
-    // Removed onBorrow
 }
 
 export function PoolCard({ poolAddress, pool, onSupply }: PoolCardProps) {
