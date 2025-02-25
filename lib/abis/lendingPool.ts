@@ -130,6 +130,67 @@ export const lendingPoolABI = [
                 "type": "address"
             },
             {
+                "indexed": false,
+                "internalType": "address",
+                "name": "loanToken",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "address",
+                "name": "collateralToken",
+                "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "totalSupplyAssets",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "totalSupplyShares",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "totalBorrowAssets",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "totalBorrowShares",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "totalCollateral",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "utilizationRate",
+                "type": "uint256"
+            }
+        ],
+        "name": "LendingPoolStats",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "address",
+                "name": "lendingPool",
+                "type": "address"
+            },
+            {
                 "indexed": true,
                 "internalType": "address",
                 "name": "caller",
