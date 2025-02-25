@@ -3,22 +3,11 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useReadContract, useReadContracts, useWriteContract } from 'wagmi';
-import { CONTRACTS, PoolDetails, PositionType } from '@/config/contracts';
+import { CONTRACTS } from '@/config/contracts';
 import { Address, parseUnits } from 'viem';
-import { erc20Abi } from 'viem';
 import { toast } from 'sonner';
 import { lendingPoolABI } from '@/lib/abis/lendingPool';
-
-// Types
-export interface CreateLendingPoolParams {
-    loanToken: Address;
-    collateralToken: Address;
-    loanTokenUsdDataFeed: Address;
-    collateralTokenUsdDataFeed: Address;
-    liquidationThresholdPercentage: string; // Value as percentage (e.g., "80" for 80%)
-    interestRate: string; // Value in basis points (e.g., "500" for 5%)
-    positionType: PositionType;
-}
+import { CreateLendingPoolParams, PoolDetails, PositionType } from '@/lib/types/contracts';
 
 export function useLendingPoolFactory() {
     console.log('useLendingPoolFactory hook initialized');
@@ -314,9 +303,6 @@ export function useLendingPoolFactory() {
         console.log('Creating lending pool with params:', params);
 
         try {
-            const liquidationThreshold = parseUnits(params.liquidationThresholdPercentage, 0);
-            const interestRate = parseUnits(params.interestRate, 0);
-
             const hash = await writeContract({
                 address: CONTRACTS.LENDING_POOL_FACTORY.address,
                 abi: CONTRACTS.LENDING_POOL_FACTORY.abi,
@@ -326,8 +312,8 @@ export function useLendingPoolFactory() {
                     params.collateralToken,
                     params.loanTokenUsdDataFeed,
                     params.collateralTokenUsdDataFeed,
-                    liquidationThreshold,
-                    interestRate,
+                    params.liquidationThresholdPercentage,
+                    params.interestRate,
                     params.positionType
                 ],
             });
