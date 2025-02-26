@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useReadContract, useReadContracts, useWriteContract } from 'wagmi';
 import { CONTRACTS } from '@/config/contracts';
-import { Address, parseUnits } from 'viem';
+import { Address, erc20Abi } from 'viem';
 import { toast } from 'sonner';
 import { lendingPoolABI } from '@/lib/abis/lendingPool';
 import { CreateLendingPoolParams, PoolDetails, PositionType } from '@/lib/types/contracts';
