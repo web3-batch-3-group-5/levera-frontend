@@ -3,7 +3,6 @@
 
 import { useRouter } from 'next/navigation';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
-import { useGetLendingPools } from '@/graphql/hooks/useLendingPools';
 import { PoolCard } from '@/components/pools/PoolCard';
 import { Button } from '@/components/shared/Button';
 import { Plus, Search, RefreshCw, AlertTriangle } from 'lucide-react';
@@ -16,8 +15,6 @@ export default function PoolsPage() {
     const { address, isConnected } = useAccount();
     const { poolAddresses, pools, isLoading, error, refresh } =
         useLendingPoolFactory();
-    // const { poolAddresses, pools, isLoading, error, refresh } =
-    //   useGetLendingPools({ first: 5, skip: 0 });
 
     const [searchTerm, setSearchTerm] = useState('');
     const [isRefreshing, setIsRefreshing] = useState(false);
