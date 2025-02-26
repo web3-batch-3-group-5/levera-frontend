@@ -324,11 +324,21 @@ export default function CreatePoolPage() {
                             </div>
 
                             <div>
-                                <label className='block text-sm font-medium mb-2'>
-                                    Liquidation Threshold (%)
-                                </label>
+                                <div className='flex justify-between items-center mb-2'>
+                                    <label className='block text-sm font-medium'>
+                                        Liquidation Threshold (%)
+                                    </label>
+                                    <div className='flex items-center gap-1 text-sm text-muted-foreground'>
+                                        <span>
+                                            {
+                                                formData.liquidationThresholdPercentage
+                                            }
+                                            %
+                                        </span>
+                                    </div>
+                                </div>
                                 <input
-                                    type='number'
+                                    type='range'
                                     name='liquidationThresholdPercentage'
                                     value={
                                         formData.liquidationThresholdPercentage
@@ -336,44 +346,52 @@ export default function CreatePoolPage() {
                                     onChange={handleInputChange}
                                     min='1'
                                     max='100'
-                                    placeholder='80'
-                                    className='w-full px-4 py-2 bg-background border rounded-md'
-                                    required
+                                    step='1'
+                                    className='w-full'
                                     disabled={isPending || isConfirming}
                                 />
-                                <p className='text-xs text-muted-foreground mt-1'>
+                                <div className='flex justify-between text-xs text-muted-foreground mt-1'>
+                                    <span>0%</span>
+                                    <span>50%</span>
+                                    <span>100%</span>
+                                </div>
+                                <p className='text-xs text-muted-foreground mt-2 flex items-center gap-1'>
+                                    <Info className='size-3' />
                                     The percentage threshold for liquidation
                                     (e.g., 80 means 0.8 or 80%)
                                 </p>
                             </div>
 
-                            {/* Additional info box */}
-                            <div className='bg-muted/50 rounded-lg p-4 space-y-2 text-sm'>
-                                <div className='flex items-start gap-2'>
-                                    <AlertTriangle className='size-4 text-amber-500 flex-shrink-0 mt-0.5' />
-                                    <div>
-                                        <p className='font-medium mb-1'>
-                                            Important Information
-                                        </p>
-                                        <p className='text-muted-foreground text-xs'>
-                                            Make sure you've verified the token
-                                            addresses and price feeds. Once
-                                            created, pool parameters cannot be
-                                            changed.
-                                        </p>
+                            <div>
+                                <div className='flex justify-between items-center mb-2'>
+                                    <label className='block text-sm font-medium'>
+                                        Interest Rate (%)
+                                    </label>
+                                    <div className='flex items-center gap-1 text-sm text-muted-foreground'>
+                                        <span>{formData.interestRate}%</span>
                                     </div>
                                 </div>
-
-                                {txHash && (
-                                    <div className='pt-2 mt-2 border-t border-border'>
-                                        <p className='text-xs text-muted-foreground'>
-                                            Transaction Hash:
-                                        </p>
-                                        <p className='font-mono text-xs break-all'>
-                                            {txHash}
-                                        </p>
-                                    </div>
-                                )}
+                                <input
+                                    type='range'
+                                    name='interestRate'
+                                    value={formData.interestRate}
+                                    onChange={handleInputChange}
+                                    min='0'
+                                    max='100'
+                                    step='1'
+                                    className='w-full'
+                                    disabled={isPending || isConfirming}
+                                />
+                                <div className='flex justify-between text-xs text-muted-foreground mt-1'>
+                                    <span>0%</span>
+                                    <span>50%</span>
+                                    <span>100%</span>
+                                </div>
+                                <p className='text-xs text-muted-foreground mt-2 flex items-center gap-1'>
+                                    <Info className='size-3' />
+                                    The interest rate percentage (e.g., 10 means
+                                    10%)
+                                </p>
                             </div>
 
                             <Button
@@ -385,6 +403,43 @@ export default function CreatePoolPage() {
                                 {getButtonText()}
                             </Button>
                         </div>
+
+                        {/* Additional info box */}
+                        <div className='bg-muted/50 rounded-lg p-4 space-y-2 text-sm'>
+                            <div className='flex items-start gap-2'>
+                                <AlertTriangle className='size-4 text-amber-500 flex-shrink-0 mt-0.5' />
+                                <div>
+                                    <p className='font-medium mb-1'>
+                                        Important Information
+                                    </p>
+                                    <p className='text-muted-foreground text-xs'>
+                                        Make sure you've verified the token
+                                        addresses and price feeds. Once created,
+                                        pool parameters cannot be changed.
+                                    </p>
+                                </div>
+                            </div>
+
+                            {txHash && (
+                                <div className='pt-2 mt-2 border-t border-border'>
+                                    <p className='text-xs text-muted-foreground'>
+                                        Transaction Hash:
+                                    </p>
+                                    <p className='font-mono text-xs break-all'>
+                                        {txHash}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+
+                        <Button
+                            type='submit'
+                            className='w-full'
+                            size='lg'
+                            disabled={isPending || isConfirming}
+                        >
+                            {getButtonText()}
+                        </Button>
                     </form>
                 </div>
             </div>
