@@ -21,7 +21,7 @@ export interface CreateLendingPoolParams {
 }
 
 export function useLendingPoolFactory() {
-    console.log('useLendingPoolFactory hook initialized');
+    // console.log('useLendingPoolFactory hook initialized');
 
     // State for pools data
     const [pools, setPools] = useState<PoolDetails[]>([]);
@@ -31,7 +31,7 @@ export function useLendingPoolFactory() {
     const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
 
     // Log contract address for debugging
-    console.log('Factory Contract address:', CONTRACTS.LENDING_POOL_FACTORY.address);
+    // console.log('Factory Contract address:', CONTRACTS.LENDING_POOL_FACTORY.address);
 
     // We don't have a getPoolCount function, so we'll need to iterate through the array
     // and stop when we hit a zero address or encounter an error
@@ -112,10 +112,10 @@ export function useLendingPoolFactory() {
 
     // Process the pool addresses
     useEffect(() => {
-        console.log('Processing potential pools:', potentialPools);
+        // console.log('Processing potential pools:', potentialPools);
 
         if (!potentialPools) {
-            console.log('No potential pools data yet');
+            // console.log('No potential pools data yet');
             return;
         }
 
@@ -128,17 +128,17 @@ export function useLendingPoolFactory() {
                 .map(result => result.result as Address)
                 .filter(addr => !!addr && addr !== '0x0000000000000000000000000000000000000000');
 
-            console.log('Valid pool addresses found:', validPools);
+            // console.log('Valid pool addresses found:', validPools);
 
             if (validPools.length === 0) {
-                console.log('No valid pool addresses found - using mock data');
+                // console.log('No valid pool addresses found - using mock data');
                 createMockPoolData();
                 return;
             }
 
             setPoolAddresses(validPools);
         } catch (err) {
-            console.error('Error processing pool addresses:', err);
+            // console.error('Error processing pool addresses:', err);
             setError(err instanceof Error ? err : new Error('Failed to process pool addresses'));
 
             // Use mock data for development when real data fails
@@ -292,12 +292,12 @@ export function useLendingPoolFactory() {
                 } as PoolDetails;
             });
 
-            console.log('Processed pool details with token info:', completePools);
+            // console.log('Processed pool details with token info:', completePools);
             setPools(completePools);
             setIsLoading(false);
             setError(null);
         } catch (err) {
-            console.error('Error processing token details:', err);
+            // console.error('Error processing token details:', err);
             setError(err instanceof Error ? err : new Error('Failed to process token details'));
             
             // Use mock data if processing fails
@@ -353,8 +353,8 @@ export function useLendingPoolFactory() {
             };
         });
 
-        console.log('Mock addresses created:', mockAddresses);
-        console.log('Mock pools created:', mockPools);
+        // console.log('Mock addresses created:', mockAddresses);
+        // console.log('Mock pools created:', mockPools);
 
         setPoolAddresses(mockAddresses);
         setPools(mockPools);
@@ -364,15 +364,15 @@ export function useLendingPoolFactory() {
 
     // Refresh function to manually trigger data refetch
     const refresh = useCallback(async () => {
-        console.log('Manual refresh triggered');
+        // console.log('Manual refresh triggered');
         try {
             setIsLoading(true);
             await refetchPotentialPools();
-            console.log('Refresh completed');
+            // console.log('Refresh completed');
             setLastRefreshed(new Date());
             return true;
         } catch (err) {
-            console.error('Error refreshing pools:', err);
+            // console.error('Error refreshing pools:', err);
             setError(err instanceof Error ? err : new Error('Failed to refresh pools'));
             return false;
         } finally {
@@ -385,7 +385,7 @@ export function useLendingPoolFactory() {
     const { writeContract, isPending: isCreatingPool } = useWriteContract();
 
     const createLendingPool = useCallback(async (params: CreateLendingPoolParams) => {
-        console.log('Creating lending pool with params:', params);
+        // console.log('Creating lending pool with params:', params);
 
         try {
             const liquidationThreshold = parseUnits(params.liquidationThresholdPercentage, 0);
@@ -406,7 +406,7 @@ export function useLendingPoolFactory() {
                 ],
             });
 
-            console.log('Lending pool creation result:', hash);
+            // console.log('Lending pool creation result:', hash);
 
             // Refresh the pools list after successful creation
             toast.promise(refresh(), {
@@ -424,33 +424,33 @@ export function useLendingPoolFactory() {
 
     // Get pool info by address
     const getPoolInfo = useCallback((poolAddress: Address) => {
-        console.log('Getting pool info for address:', poolAddress);
+        // console.log('Getting pool info for address:', poolAddress);
         const poolIndex = poolAddresses.findIndex(addr => addr.toLowerCase() === poolAddress.toLowerCase());
-        console.log('Pool index:', poolIndex);
+        // console.log('Pool index:', poolIndex);
         return poolIndex !== -1 ? pools[poolIndex] : null;
     }, [pools, poolAddresses]);
 
     // Check if pool exists
     const checkPoolExists = useCallback((loanToken: Address, collateralToken: Address) => {
-        console.log('Checking if pool exists for:', loanToken, collateralToken);
+        // console.log('Checking if pool exists for:', loanToken, collateralToken);
         const exists = pools.some(pool =>
             pool.loanToken.toLowerCase() === loanToken.toLowerCase() &&
             pool.collateralToken.toLowerCase() === collateralToken.toLowerCase()
         );
-        console.log('Pool exists:', exists);
+        // console.log('Pool exists:', exists);
         return exists;
     }, [pools]);
 
-    // Debug logging
-    useEffect(() => {
-        console.log('=== LENDING POOL FACTORY STATE ===');
-        console.log('Pools:', pools);
-        console.log('Pool Addresses:', poolAddresses);
-        console.log('Is Loading:', isLoading);
-        console.log('Error:', error);
-        console.log('Last Refreshed:', lastRefreshed);
-        console.log('===============================');
-    }, [pools, poolAddresses, isLoading, error, lastRefreshed]);
+    // // Debug logging
+    // useEffect(() => {
+    //     console.log('=== LENDING POOL FACTORY STATE ===');
+    //     console.log('Pools:', pools);
+    //     console.log('Pool Addresses:', poolAddresses);
+    //     console.log('Is Loading:', isLoading);
+    //     console.log('Error:', error);
+    //     console.log('Last Refreshed:', lastRefreshed);
+    //     console.log('===============================');
+    // }, [pools, poolAddresses, isLoading, error, lastRefreshed]);
 
     return {
         pools,

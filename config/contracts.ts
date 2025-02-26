@@ -8,7 +8,7 @@ import { positionABI } from '@/lib/abis/position';
 
 export const CONTRACTS = {
     LENDING_POOL_FACTORY: {
-        address: "0x4e0524Bd8cE75de87f15B08CFc13B3cBF7B388Bf" as Address,
+        address: "0x17A55ead5D71f7ADBE24d90F3901F87E9601EB1A" as Address,
         abi: lendingPoolFactoryABI,
     },
     POSITION_FACTORY: {

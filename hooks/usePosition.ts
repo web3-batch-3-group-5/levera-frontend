@@ -1,67 +1,155 @@
 'use client';
 
-import { useCallback } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { useReadContract, useWriteContract } from 'wagmi';
 import { Address, formatUnits } from 'viem';
 import { positionABI } from '@/lib/abis/position';
 
 export function usePosition(positionAddress: Address) {
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const { writeContract, isPending: isWritePending } = useWriteContract();
 
     // Read position data
-    const { data: baseCollateral } = useReadContract({
+    const { 
+        data: baseCollateral,
+        isLoading: isLoadingBaseCollateral,
+        error: baseCollateralError
+     } = useReadContract({
         address: positionAddress,
         abi: positionABI,
         functionName: 'baseCollateral',
     });
 
-    const { data: effectiveCollateral } = useReadContract({
+    const {
+        data: effectiveCollateral,
+        isLoading: isLoadingEffectiveCollateral,
+        error: effectiveCollateralError
+    } = useReadContract({
         address: positionAddress,
         abi: positionABI,
         functionName: 'effectiveCollateral',
     });
 
-    const { data: borrowShares } = useReadContract({
+    const { 
+        data: borrowShares,
+        isLoading: isLoadingBorrowShares,
+        error: borrowSharesError
+    } = useReadContract({
         address: positionAddress,
         abi: positionABI,
         functionName: 'borrowShares',
     });
 
-    const { data: leverage } = useReadContract({
+    const { 
+        data: leverage,
+        isLoading: isLoadingLeverage,
+        error: leverageError
+    } = useReadContract({
         address: positionAddress,
         abi: positionABI,
         functionName: 'leverage',
     });
 
-    const { data: liquidationPrice } = useReadContract({
+    const {
+        data: liquidationPrice,
+        isLoading: isLoadingLiqPrice,
+        error: liqPriceError
+    } = useReadContract({
         address: positionAddress,
         abi: positionABI,
         functionName: 'liquidationPrice',
     });
 
-    const { data: health } = useReadContract({
+    const {
+        data: health,
+        isLoading: isLoadingHealth,
+        error: healthError
+    } = useReadContract({
         address: positionAddress,
         abi: positionABI,
         functionName: 'health',
     });
 
-    const { data: ltv } = useReadContract({
+    const { 
+        data: ltv,
+        isLoading: isLoadingLtv,
+        error: ltvError
+    } = useReadContract({
         address: positionAddress,
         abi: positionABI,
         functionName: 'ltv',
     });
 
-    const { data: lastUpdated } = useReadContract({
+    const {
+        data: lastUpdated,
+        isLoading: isLoadingLastUpdated
+    } = useReadContract({
         address: positionAddress,
         abi: positionABI,
         functionName: 'lastUpdated',
     });
 
-    const { data: lendingPoolAddress } = useReadContract({
+    const {
+        data: lendingPoolAddress,
+        isLoading: isLoadingLendingPool
+    } = useReadContract({
         address: positionAddress,
         abi: positionABI,
         functionName: 'lendingPool',
     });
+
+    // Update loading state based on individual loading states
+    useEffect(() => {
+        const isLoadingAny = isLoadingBaseCollateral || 
+                          isLoadingEffectiveCollateral || 
+                          isLoadingBorrowShares || 
+                          isLoadingLeverage || 
+                          isLoadingLiqPrice || 
+                          isLoadingHealth || 
+                          isLoadingLtv || 
+                          isLoadingLastUpdated || 
+                          isLoadingLendingPool;
+        
+        setIsLoading(isLoadingAny);
+    }, [
+        isLoadingBaseCollateral, 
+        isLoadingEffectiveCollateral, 
+        isLoadingBorrowShares, 
+        isLoadingLeverage, 
+        isLoadingLiqPrice, 
+        isLoadingHealth, 
+        isLoadingLtv, 
+        isLoadingLastUpdated, 
+        isLoadingLendingPool
+    ]);
+
+    // Handle errors
+    useEffect(() => {
+        const errors = [
+            baseCollateralError,
+            effectiveCollateralError,
+            borrowSharesError,
+            leverageError,
+            liqPriceError,
+            healthError,
+            ltvError
+        ].filter(Boolean);
+
+        if (errors.length > 0) {
+            setError((errors[0] as Error).message);
+        } else {
+            setError(null);
+        }
+    }, [
+        baseCollateralError,
+        effectiveCollateralError,
+        borrowSharesError,
+        leverageError,
+        liqPriceError,
+        healthError,
+        ltvError
+    ]);
 
     // Position actions
     const addCollateral = useCallback(async (amount: bigint) => {
@@ -172,6 +260,8 @@ export function usePosition(positionAddress: Address) {
         updateLeverage,
 
         // Loading states
+        isLoading,
         isWritePending,
+        error,
     };
 }
