@@ -203,14 +203,14 @@ export function PoolCard({ poolAddress, pool, onSupply }: PoolCardProps) {
                 <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Interest Rate</p>
                     <p className="font-medium">
-                        {interestRate ? (Number(interestRate) / 100).toFixed(2) : '0.00'}%
+                        {interestRate ? (Number(interestRate)).toFixed(2) : '0.00'}%
                     </p>
                 </div>
 
                 <div className="space-y-1">
                     <p className="text-sm text-muted-foreground">Liquidation Threshold</p>
                     <p className="font-medium">
-                        {pool.liquidationThresholdPercentage ? (Number(pool.liquidationThresholdPercentage) / 100).toFixed(2) : '0.00'}%
+                        {pool.liquidationThresholdPercentage ? (Number(pool.liquidationThresholdPercentage)).toFixed(2) : '0.00'}%
                     </p>
                 </div>
 

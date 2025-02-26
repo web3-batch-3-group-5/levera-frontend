@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/shared/Button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Info, Percent, AlertTriangle } from 'lucide-react';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { Address, parseUnits } from 'viem';
 import { toast } from 'sonner';
@@ -25,7 +25,7 @@ const initialFormData: FormData = {
     loanTokenUsdDataFeed: '',
     collateralTokenUsdDataFeed: '',
     liquidationThresholdPercentage: '80', // Default 80%, representing 0.8
-    interestRate: '5', // Default 5%, represented as 500 basis points
+    interestRate: '10', // Default 10%
     positionType: PositionType.LONG, // Default to LONG position
 };
 
@@ -74,11 +74,28 @@ export default function CreatePoolPage() {
         return true;
     };
 
+    const validatePercentages = (data: FormData): boolean => {
+        const liquidationThreshold = Number(data.liquidationThresholdPercentage);
+        const interestRate = Number(data.interestRate);
+
+        if (liquidationThreshold < 0 || liquidationThreshold > 100) {
+            toast.error('Liquidation threshold must be between 0 and 100');
+            return false;
+        }
+
+        if (interestRate < 0 || interestRate > 100) {
+            toast.error('Interest rate must be between 0 and 100');
+            return false;
+        }
+
+        return true;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         console.log('Form submitted', formData);
 
-        if (!validateAddresses(formData)) {
+        if (!validateAddresses(formData) || !validatePercentages(formData)) {
             return;
         }
 
@@ -87,40 +104,39 @@ export default function CreatePoolPage() {
                 id: 'wallet-confirm'
             });
 
+            // Convert percentages to contract format
+            // 80% => 80 (since contract expects 0-100)
             const liquidationThreshold = parseUnits(formData.liquidationThresholdPercentage, 0);
             const interestRate = parseUnits(formData.interestRate, 0);
 
-            writeContract(
-                {
-                    address: CONTRACTS.LENDING_POOL_FACTORY.address,
-                    abi: CONTRACTS.LENDING_POOL_FACTORY.abi,
-                    functionName: 'createLendingPool',
-                    args: [
-                        formData.loanToken as Address,
-                        formData.collateralToken as Address,
-                        formData.loanTokenUsdDataFeed as Address,
-                        formData.collateralTokenUsdDataFeed as Address,
-                        liquidationThreshold,
-                        interestRate,
-                        formData.positionType,
-                    ],
+            writeContract({
+                address: CONTRACTS.LENDING_POOL_FACTORY.address,
+                abi: CONTRACTS.LENDING_POOL_FACTORY.abi,
+                functionName: 'createLendingPool',
+                args: [
+                    formData.loanToken as Address,
+                    formData.collateralToken as Address,
+                    formData.loanTokenUsdDataFeed as Address,
+                    formData.collateralTokenUsdDataFeed as Address,
+                    liquidationThreshold,
+                    interestRate,
+                    formData.positionType,
+                ],
+            }, {
+                onSuccess: (hash) => {
+                    console.log('Transaction Hash:', hash);
+                    setTxHash(hash);
+                    toast.dismiss('wallet-confirm');
+                    toast.loading('Transaction submitted, waiting for confirmation...', {
+                        id: 'tx-confirm'
+                    });
                 },
-                {
-                    onSuccess: (hash) => {
-                        console.log('Transaction Hash:', hash);
-                        setTxHash(hash);
-                        toast.dismiss('wallet-confirm');
-                        toast.loading('Transaction submitted, waiting for confirmation...', {
-                            id: 'tx-confirm'
-                        });
-                    },
-                    onError: (error) => {
-                        console.error('Transaction Error:', error);
-                        toast.dismiss('wallet-confirm');
-                        toast.error('Failed to create pool: ' + error.message);
-                    },
+                onError: (error) => {
+                    console.error('Transaction Error:', error);
+                    toast.dismiss('wallet-confirm');
+                    toast.error('Failed to create pool: ' + error.message);
                 }
-            );
+            });
         } catch (error: unknown) {
             console.error('Error details:', error);
             toast.dismiss('wallet-confirm');
@@ -255,44 +271,64 @@ export default function CreatePoolPage() {
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-2">
-                                    Liquidation Threshold (%)
-                                </label>
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="block text-sm font-medium">
+                                        Liquidation Threshold (%)
+                                    </label>
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                        <span>{formData.liquidationThresholdPercentage}%</span>
+                                    </div>
+                                </div>
                                 <input
-                                    type="number"
+                                    type="range"
                                     name="liquidationThresholdPercentage"
                                     value={formData.liquidationThresholdPercentage}
                                     onChange={handleInputChange}
                                     min="1"
                                     max="100"
-                                    placeholder="80"
-                                    className="w-full px-4 py-2 bg-background border rounded-md"
-                                    required
+                                    step="1"
+                                    className="w-full"
                                     disabled={isPending || isConfirming}
                                 />
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                                    <span>0%</span>
+                                    <span>50%</span>
+                                    <span>100%</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                                    <Info className="size-3" />
                                     The percentage threshold for liquidation (e.g., 80 means 0.8 or 80%)
                                 </p>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-2">
-                                    Interest Rate (%)
-                                </label>
+                                <div className="flex justify-between items-center mb-2">
+                                    <label className="block text-sm font-medium">
+                                        Interest Rate (%)
+                                    </label>
+                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                        <span>{formData.interestRate}%</span>
+                                    </div>
+                                </div>
                                 <input
-                                    type="number"
+                                    type="range"
                                     name="interestRate"
                                     value={formData.interestRate}
                                     onChange={handleInputChange}
                                     min="0"
                                     max="100"
-                                    placeholder="5"
-                                    className="w-full px-4 py-2 bg-background border rounded-md"
-                                    required
+                                    step="1"
+                                    className="w-full"
                                     disabled={isPending || isConfirming}
                                 />
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    The interest rate precentage (e.g., 5 means 5%)
+                                <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                                    <span>0%</span>
+                                    <span>50%</span>
+                                    <span>100%</span>
+                                </div>
+                                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                                    <Info className="size-3" />
+                                    The interest rate percentage (e.g., 10 means 10%)
                                 </p>
                             </div>
 
@@ -315,6 +351,26 @@ export default function CreatePoolPage() {
                                     The type of position this pool supports
                                 </p>
                             </div>
+                        </div>
+
+                        {/* Additional info box */}
+                        <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
+                            <div className="flex items-start gap-2">
+                                <AlertTriangle className="size-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                                <div>
+                                    <p className="font-medium mb-1">Important Information</p>
+                                    <p className="text-muted-foreground text-xs">
+                                        Make sure you've verified the token addresses and price feeds. Once created, pool parameters cannot be changed.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            {txHash && (
+                                <div className="pt-2 mt-2 border-t border-border">
+                                    <p className="text-xs text-muted-foreground">Transaction Hash:</p>
+                                    <p className="font-mono text-xs break-all">{txHash}</p>
+                                </div>
+                            )}
                         </div>
 
                         <Button

@@ -5,9 +5,9 @@ import { useState, useEffect } from 'react';
 import { Address, parseUnits, formatUnits } from 'viem';
 import { useAccount } from 'wagmi';
 import { Button } from '@/components/shared/Button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Info, Wallet } from 'lucide-react';
 import { formatAddress } from '@/lib/utils';
-import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { toast } from 'sonner';
 import { lendingPoolABI } from '@/lib/abis/lendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
@@ -31,7 +31,13 @@ export default function WithdrawPage() {
     const pool = poolIndex !== -1 ? pools[poolIndex] : undefined;
 
     // Get user supply shares
-    const { userSupplyShares, totalSupplyAssets, totalSupplyShares } = useLendingPool(poolAddress);
+    const { 
+        userSupplyShares, 
+        totalSupplyAssets, 
+        totalSupplyShares,
+        totalBorrowAssets,
+        interestRate
+    } = useLendingPool(poolAddress);
 
     // Contract state
     const { writeContract, isPending: isWithdrawPending } = useWriteContract();
@@ -44,14 +50,34 @@ export default function WithdrawPage() {
         ? (userSupplyShares * totalSupplyAssets) / totalSupplyShares
         : 0n;
 
+    // Calculate amount left after withdrawal
+    const assetsLeftAfterWithdrawal = availableWithdrawal && amount
+        ? availableWithdrawal - (parseUnits(amount, 18) || 0n)
+        : availableWithdrawal;
+
+    // Calculate utilization rate
+    const utilizationRate = totalSupplyAssets && totalSupplyAssets > 0n
+        ? (Number(totalBorrowAssets || 0n) / Number(totalSupplyAssets)) * 100
+        : 0;
+
+    // Calculate supply APY (simplified)
+    const supplyAPY = interestRate 
+        ? Number(interestRate) * (utilizationRate / 100)
+        : 0;
+
+    // Calculate estimated yearly earnings on remaining balance
+    const yearlyEarnings = assetsLeftAfterWithdrawal && assetsLeftAfterWithdrawal > 0n
+        ? Number(formatUnits(assetsLeftAfterWithdrawal, 18)) * (supplyAPY / 100)
+        : 0;
+    
     // Watch for transaction completion
     useEffect(() => {
         if (receipt?.status === 'success') {
             toast.dismiss('tx-confirm');
-            toast.success(`Successfully withdrew ${formatTokenAmount(withdrawShares)} shares!`);
+            toast.success(`Successfully withdrew ${amount} ${pool?.loanTokenSymbol}!`);
             router.push(`/pools/${poolAddress}`);
         }
-    }, [receipt, router, withdrawShares, poolAddress]);
+    }, [receipt, router, amount, pool?.loanTokenSymbol, poolAddress]);
 
     // Convert input amount to shares
     useEffect(() => {
@@ -59,8 +85,8 @@ export default function WithdrawPage() {
 
         try {
             const assetsAmount = parseUnits(amount, 18);
-            // Simple conversion - in a real app you'd use the contract's conversion method
-            const shares = totalSupplyShares * assetsAmount / totalSupplyAssets;
+            // Shares = amount * totalSupplyShares / totalSupplyAssets
+            const shares = assetsAmount * totalSupplyShares / totalSupplyAssets;
             setWithdrawShares(shares);
         } catch (error) {
             console.error('Error calculating shares:', error);
@@ -83,18 +109,25 @@ export default function WithdrawPage() {
 
             toast.loading('Please confirm the transaction...', { id: 'tx-confirm' });
 
-            const hash = await writeContract({
+            writeContract({
                 address: poolAddress,
                 abi: lendingPoolABI,
                 functionName: 'withdraw',
                 args: [withdrawShares],
-            });
-
-            console.log('Withdraw transaction hash:', hash);
-            setTxHash(hash);
-            toast.dismiss('tx-confirm');
-            toast.loading('Transaction submitted, waiting for confirmation...', {
-                id: 'tx-confirm'
+            }, {
+                onSuccess: (hash) => {
+                    console.log('Withdraw transaction hash:', hash);
+                    setTxHash(hash);
+                    toast.dismiss('tx-confirm');
+                    toast.loading('Transaction submitted, waiting for confirmation...', {
+                        id: 'tx-confirm'
+                    });
+                },
+                onError: (error) => {
+                    console.error('Withdraw Error:', error);
+                    toast.dismiss('tx-confirm');
+                    toast.error('Failed to withdraw tokens');
+                }
             });
         } catch (error) {
             console.error('Error in withdraw process:', error);
@@ -109,6 +142,17 @@ export default function WithdrawPage() {
         const maxAmount = Number(formatUnits(availableWithdrawal, 18));
         const amount = (maxAmount * percentage) / 100;
         setAmount(amount.toString());
+    };
+
+    // Input validation
+    const isExceedingAvailable = () => {
+        if (!availableWithdrawal || !amount) return false;
+        try {
+            const amountBigInt = parseUnits(amount, 18);
+            return amountBigInt > availableWithdrawal;
+        } catch {
+            return false;
+        }
     };
 
     if (!pool) {
@@ -130,28 +174,35 @@ export default function WithdrawPage() {
             <Button
                 variant="ghost"
                 className="mb-6"
-                onClick={() => router.back()}
+                onClick={() => router.push(`/pools/${poolAddress}`)}
             >
                 <ArrowLeft className="size-4 mr-2" />
-                Back to Pool
+                Back to Pool Details
             </Button>
 
             <div className="max-w-xl mx-auto">
                 <div className="bg-card rounded-lg border p-6 space-y-6">
                     <div>
-                        <h1 className="text-2xl font-bold mb-2">
+                        <h1 className="text-2xl font-bold mb-2 px-2">
                             Withdraw {pool.loanTokenSymbol}
                         </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Withdraw your supplied {pool.loanTokenSymbol} from the pool
+                        <p className="text-sm text-muted-foreground px-2">
+                            Withdraw your supplied {pool.loanTokenSymbol} from the {pool.loanTokenSymbol}/{pool.collateralTokenSymbol} pool
                         </p>
                     </div>
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium mb-2">
-                                Amount to Withdraw
-                            </label>
+                            <div className="flex justify-between items-center mb-2 px-2">
+                                <label className="block text-sm font-medium">
+                                    Amount to Withdraw
+                                </label>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                    <Wallet className="size-3.5" />
+                                    <span>Available: {formatTokenAmount(availableWithdrawal)} {pool.loanTokenSymbol}</span>
+                                </div>
+                            </div>
+                            
                             <div className="relative">
                                 <input
                                     type="number"
@@ -168,14 +219,18 @@ export default function WithdrawPage() {
                                     >
                                         MAX
                                     </button>
-                                    <span className="text-sm text-muted-foreground">
+                                    <span className="text-sm text-muted-foreground pr-8">
                                         {pool.loanTokenSymbol}
                                     </span>
                                 </div>
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Available: {formatTokenAmount(availableWithdrawal)} {pool.loanTokenSymbol}
-                            </p>
+                            
+                            {isExceedingAvailable() && (
+                                <p className="mt-1 text-sm text-destructive flex items-center gap-1">
+                                    <Info className="size-3.5" />
+                                    Amount exceeds available balance
+                                </p>
+                            )}
                             
                             <div className="flex gap-2 mt-3">
                                 {[25, 50, 75, 100].map((percentage) => (
@@ -185,6 +240,7 @@ export default function WithdrawPage() {
                                         variant="outline"
                                         onClick={() => handlePercentageClick(percentage)}
                                         disabled={isWithdrawPending || isConfirming}
+                                        className="flex-1"
                                     >
                                         {percentage}%
                                     </Button>
@@ -192,19 +248,48 @@ export default function WithdrawPage() {
                             </div>
                         </div>
 
-                        <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Pool Address</span>
-                                <span className="font-mono">{formatAddress(poolAddress)}</span>
+                        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                            <div className="flex justify-between items-center">
+                                <div className="text-sm text-muted-foreground">Your Supplied Assets</div>
+                                <div className="font-medium">
+                                    {formatTokenAmount(availableWithdrawal)} {pool.loanTokenSymbol}
+                                </div>
                             </div>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Your Supply Shares</span>
-                                <span>{formatTokenAmount(userSupplyShares)}</span>
+                            
+                            <div className="flex justify-between items-center">
+                                <div className="text-sm text-muted-foreground">Assets Left After Withdrawal</div>
+                                <div className="font-medium">
+                                    {formatTokenAmount(assetsLeftAfterWithdrawal)} {pool.loanTokenSymbol}
+                                </div>
                             </div>
+                            
+                            <div className="flex justify-between items-center">
+                                <div className="text-sm text-muted-foreground">Current APY</div>
+                                <div className="font-medium text-green-600">
+                                    {formatPercentage(supplyAPY)}
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between items-center">
+                                <div className="text-sm text-muted-foreground">Estimated Yearly Earnings</div>
+                                <div className="font-medium text-green-600">
+                                    {yearlyEarnings.toFixed(4)} {pool.loanTokenSymbol}
+                                </div>
+                            </div>
+                            
+                            <div className="flex justify-between items-center">
+                                <div className="text-sm text-muted-foreground">Pool Address</div>
+                                <div className="font-mono text-xs">
+                                    {formatAddress(poolAddress)}
+                                </div>
+                            </div>
+                            
                             {txHash && (
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Transaction</span>
-                                    <span className="font-mono">{formatAddress(txHash)}</span>
+                                <div className="flex justify-between items-center">
+                                    <div className="text-sm text-muted-foreground">Transaction</div>
+                                    <div className="font-mono text-xs">
+                                        {formatAddress(txHash)}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -213,7 +298,15 @@ export default function WithdrawPage() {
                             className="w-full"
                             size="lg"
                             onClick={handleWithdraw}
-                            disabled={!amount || isWithdrawPending || isConfirming || Number(amount) === 0 || (availableWithdrawal && parseUnits(amount, 18) > availableWithdrawal)}
+                            disabled={
+                                !amount || 
+                                isExceedingAvailable() || 
+                                isWithdrawPending || 
+                                isConfirming || 
+                                Number(amount) <= 0 || 
+                                !availableWithdrawal || 
+                                availableWithdrawal === 0n
+                            }
                         >
                             {isConfirming ? 'Confirming...' : isWithdrawPending ? 'Withdrawing...' : 'Withdraw'}
                         </Button>
@@ -223,3 +316,11 @@ export default function WithdrawPage() {
         </main>
     );
 }
+
+// Helper function to format percentage
+const formatPercentage = (value: number) => {
+    return value.toLocaleString(undefined, {
+        maximumFractionDigits: 2,
+        minimumFractionDigits: 2
+    }) + '%';
+};
