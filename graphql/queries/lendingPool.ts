@@ -46,9 +46,9 @@ export const GET_USER_POSITIONS = `
   }
 `;
 
-export const GET_POOL_POSITIONS = `
-  query GetUserPositions($positionId: ID!) {
-    userPositions(id: $positionId) {
+export const GET_USER_POSITION = `
+  query GetUserPosition($positionId: ID!) {
+    userPosition(id: $positionId) {
       id
       lendingPool,
       caller,
