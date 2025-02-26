@@ -1,25 +1,19 @@
+// app/pools/[address]/supply/page.tsx
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Address, parseUnits, formatUnits, zeroAddress } from 'viem';
+import { Address, parseUnits, formatUnits, zeroAddress, maxUint256 } from 'viem';
 import { useAccount } from 'wagmi';
 import { Button } from '@/components/shared/Button';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Info, WalletIcon } from 'lucide-react';
 import { formatAddress } from '@/lib/utils';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { erc20Abi } from 'viem';
 import { toast } from 'sonner';
 import { lendingPoolABI } from '@/lib/abis/lendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
-
-const formatTokenAmount = (amount: bigint | undefined, decimals: number = 18) => {
-    if (!amount) return '0.00';
-    return Number(formatUnits(amount, decimals)).toLocaleString(undefined, {
-        maximumFractionDigits: 6,
-        minimumFractionDigits: 2
-    });
-};
+import { formatTokenAmount } from '@/lib/utils/format';
 
 export default function SupplyPage() {
     const params = useParams();
@@ -32,6 +26,8 @@ export default function SupplyPage() {
     const [supplyAmount, setSupplyAmount] = useState<bigint>(0n);
     const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
     const [needsApproval, setNeedsApproval] = useState(false);
+    const [checkingApproval, setCheckingApproval] = useState(false);
+    const [approvalComplete, setApprovalComplete] = useState(false);
 
     // Get pool details
     const { poolAddresses, pools } = useLendingPoolFactory();
@@ -52,40 +48,69 @@ export default function SupplyPage() {
         args: [userAddress || zeroAddress],
     });
 
-    const { data: currentAllowance } = useReadContract({
+    const { data: currentAllowance, refetch: refetchAllowance } = useReadContract({
         address: pool?.loanToken,
         abi: erc20Abi,
         functionName: 'allowance',
         args: [userAddress || zeroAddress, poolAddress],
     });
 
-    // Watch for transaction completion
-    useEffect(() => {
-        console.log('Transaction state:', { receipt, txHash, isConfirming });
-
-        if (receipt?.status === 'success') {
-            toast.dismiss('tx-confirm');
-            toast.success(`Successfully supplied ${formatTokenAmount(supplyAmount)} ${pool?.loanTokenSymbol}!`);
-            router.push(`/pools/${poolAddress}`);
-        }
-    }, [receipt, router, supplyAmount, pool?.loanTokenSymbol, poolAddress, txHash, isConfirming]);
-
     // Check if approval is needed
     useEffect(() => {
-        if (!amount || !currentAllowance || !pool) return;
+        const checkApproval = async () => {
+            if (!pool || !userAddress) return;
+
+            try {
+                setCheckingApproval(true);
+                await refetchAllowance();
+
+                setNeedsApproval(currentAllowance !== undefined && currentAllowance < parseUnits(amount, 18));
+            } catch (error) {
+                console.error('Error checking allowance:', error);
+            } finally {
+                setCheckingApproval(false);
+            }
+        };
+
+        checkApproval();
+    }, [amount, userAddress, currentAllowance, pool, refetchAllowance]);
+        
+    // Update supplyAmount when amount changes
+    useEffect(() => {
+        if (!amount) {
+            setSupplyAmount(0n);
+            return;
+        }
 
         try {
             const parsedAmount = parseUnits(amount, 18);
             setSupplyAmount(parsedAmount);
-            setNeedsApproval(currentAllowance < parsedAmount);
         } catch (error) {
-            console.error('Error checking allowance:', error);
+            console.error('Error parsing amount:', error);
         }
-    }, [amount, currentAllowance, pool]);
+    }, [amount]);
+
+
+    // Watch for transaction completion
+    useEffect(() => {
+        if (receipt?.status === 'success') {
+            toast.dismiss('tx-confirm');
+            
+            if (needsApproval) {
+                toast.success('Token approved successfully!');
+                refetchAllowance().then(() => {
+                    setNeedsApproval(false);
+                });
+            } else {
+                toast.success(`Successfully supplied ${formatTokenAmount(supplyAmount)} ${pool?.loanTokenSymbol}!`);
+                router.push(`/pools/${poolAddress}`);
+            }
+        }
+    }, [receipt, router, supplyAmount, pool?.loanTokenSymbol, poolAddress, needsApproval, refetchAllowance]);
 
     // Handle token approval
     const handleApprove = async () => {
-        if (!pool || !supplyAmount) return;
+        if (!pool) return;
 
         try {
             toast.loading('Please confirm the approval in your wallet...', { id: 'approve-confirm' });
@@ -94,22 +119,22 @@ export default function SupplyPage() {
                 address: pool.loanToken,
                 abi: erc20Abi,
                 functionName: 'approve',
-                args: [poolAddress, supplyAmount],
+                args: [poolAddress, maxUint256],
             }, {
                 onSuccess: (hash) => {
                     console.log('Approval transaction hash:', hash);
+                    setTxHash(hash); 
                     toast.dismiss('approve-confirm');
-                    toast.success('Token approved successfully!');
-                    setNeedsApproval(false);
+                    toast.loading('Approval transaction submitted...', { id: 'approve-wait' });
                 },
                 onError: (error) => {
                     console.error('Approval Error:', error);
                     toast.dismiss('approve-confirm');
                     toast.error('Failed to approve token');
-                },
+                }
             });
         } catch (error) {
-            console.error('Error in approval process:', error);
+            console.error('Approval Error:', error);
             toast.dismiss('approve-confirm');
             toast.error('Failed to approve token');
         }
@@ -117,7 +142,7 @@ export default function SupplyPage() {
 
     // Handle supply
     const handleSupply = async () => {
-        if (!supplyAmount || !pool) {
+        if (!supplyAmount || !pool || supplyAmount <= 0n) {
             console.log('Supply validation failed:', { supplyAmount: supplyAmount.toString(), pool });
             return;
         }
@@ -149,12 +174,30 @@ export default function SupplyPage() {
                     console.error('Supply Error:', error);
                     toast.dismiss('tx-confirm');
                     toast.error('Failed to supply tokens');
-                },
+                }
             });
         } catch (error) {
             console.error('Error in supply process:', error);
             toast.dismiss('tx-confirm');
             toast.error('Failed to supply tokens');
+        }
+    };
+
+    // Handle percentage buttons
+    const handlePercentageClick = (percentage: number) => {
+        if (!tokenBalance) return;
+        const amount = (Number(formatUnits(tokenBalance, 18)) * percentage) / 100;
+        setAmount(amount.toString());
+    };
+
+    // Input validation
+    const isExceedingBalance = () => {
+        if (!tokenBalance || !amount) return false;
+        try {
+            const amountBigInt = parseUnits(amount, 18);
+            return amountBigInt > tokenBalance;
+        } catch {
+            return false;
         }
     };
 
@@ -179,28 +222,35 @@ export default function SupplyPage() {
             <Button
                 variant="ghost"
                 className="mb-6"
-                onClick={() => router.back()}
+                onClick={() => router.push(`/pools/${poolAddress}`)}
             >
                 <ArrowLeft className="size-4 mr-2" />
-                Back to Pool
+                Back to Pool Details
             </Button>
 
             <div className="max-w-xl mx-auto">
                 <div className="bg-card rounded-lg border p-6 space-y-6">
                     <div>
-                        <h1 className="text-2xl font-bold mb-2">
+                        <h1 className="text-2xl font-bold mb-2 px-2">
                             Supply {pool.loanTokenSymbol}
                         </h1>
-                        <p className="text-sm text-muted-foreground">
-                            Supply {pool.loanTokenSymbol} to earn interest
+                        <p className="text-sm text-muted-foreground px-2">
+                            Supply {pool.loanTokenSymbol} to earn interest in the {pool.loanTokenSymbol}/{pool.collateralTokenSymbol} pool
                         </p>
                     </div>
 
                     <div className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium mb-2">
-                                Amount to Supply
-                            </label>
+                            <div className="flex justify-between items-center mb-2 px-2">
+                                <label className="block text-sm font-medium">
+                                    Amount to Supply
+                                </label>
+                                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                    <WalletIcon className="size-3.5" />
+                                    <span>Balance: {availableBalance} {pool.loanTokenSymbol}</span>
+                                </div>
+                            </div>
+                            
                             <div className="relative">
                                 <input
                                     type="number"
@@ -217,25 +267,63 @@ export default function SupplyPage() {
                                     >
                                         MAX
                                     </button>
-                                    <span className="text-sm text-muted-foreground">
+                                    <span className="text-sm text-muted-foreground pr-8">
                                         {pool.loanTokenSymbol}
                                     </span>
                                 </div>
                             </div>
-                            <p className="text-sm text-muted-foreground mt-1">
-                                Available: {availableBalance} {pool.loanTokenSymbol}
-                            </p>
+                            
+                            {isExceedingBalance() && (
+                                <p className="mt-1 text-sm text-destructive flex items-center gap-1">
+                                    <Info className="size-3.5" />
+                                    Insufficient balance
+                                </p>
+                            )}
                         </div>
 
-                        <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-                            <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Pool Address</span>
-                                <span className="font-mono">{formatAddress(poolAddress)}</span>
+                        <div className="flex gap-2">
+                            {[25, 50, 75, 100].map((percentage) => (
+                                <Button
+                                    key={percentage}
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handlePercentageClick(percentage)}
+                                    disabled={isSupplyPending || isConfirming}
+                                    className="flex-1"
+                                >
+                                    {percentage}%
+                                </Button>
+                            ))}
+                        </div>
+
+                        <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                            <div className="flex justify-between items-center">
+                                <div className="text-sm text-muted-foreground">You will receive</div>
+                                <div className="font-medium">
+                                    {amount ? amount : '0.00'} {pool.loanTokenSymbol}
+                                </div>
                             </div>
+                            
+                            <div className="flex justify-between items-center">
+                                <div className="text-sm text-muted-foreground">Current APR</div>
+                                <div className="font-medium text-green-600">
+                                    {pool.interestRate ? Number(pool.interestRate).toFixed(2) : '0.00'}%
+                                </div>
+                            </div>
+                            
+                            <div className="flex justify-between items-center">
+                                <div className="text-sm text-muted-foreground">Pool Address</div>
+                                <div className="font-mono text-xs">
+                                    {formatAddress(poolAddress)}
+                                </div>
+                            </div>
+
                             {txHash && (
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-muted-foreground">Transaction</span>
-                                    <span className="font-mono">{formatAddress(txHash)}</span>
+                                <div className="flex justify-between items-center">
+                                    <div className="text-sm text-muted-foreground">Transaction</div>
+                                    <div className="font-mono text-xs">
+                                        {formatAddress(txHash)}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -245,16 +333,16 @@ export default function SupplyPage() {
                                 className="w-full"
                                 size="lg"
                                 onClick={handleApprove}
-                                disabled={!amount || isSupplyPending}
+                                disabled={!amount || isExceedingBalance() || isSupplyPending || isConfirming || Number(amount) <= 0}
                             >
-                                {isSupplyPending ? 'Approving...' : 'Approve'}
+                                {isConfirming ? 'Approving...' : 'Approve'}
                             </Button>
                         ) : (
                             <Button
                                 className="w-full"
                                 size="lg"
                                 onClick={handleSupply}
-                                disabled={!amount || isSupplyPending || isConfirming}
+                                disabled={!amount || isExceedingBalance() || isSupplyPending || isConfirming || Number(amount) <= 0}
                             >
                                 {isConfirming ? 'Confirming...' : isSupplyPending ? 'Supplying...' : 'Supply'}
                             </Button>

@@ -135,14 +135,16 @@ export function useLendingPoolFactory() {
         }
     }, [potentialPools]);
 
-    // Process the pool details once we have the addresses and data
+    // After getting basic pool data, fetch token details
+    const [poolBasicDetails, setPoolBasicDetails] = useState<PoolDetails[]>([]);
+
     useEffect(() => {
         if (!poolDetailsData || !poolAddresses.length) {
             return;
         }
 
         try {
-            const poolArray: PoolDetails[] = poolAddresses.map((address, index) => {
+            const poolData: PoolDetails[] = poolAddresses.map((address, index) => {
                 const baseIndex = index * 8; // 8 property queries per pool
                 
                 // Safely extract results, handling potential failures
@@ -159,66 +161,138 @@ export function useLendingPoolFactory() {
                 const interestRate = getResult<bigint>(5, 500n);
                 const liquidationThresholdPercentage = getResult<bigint>(6, 80n);
                 const positionType = getResult<PositionType>(7, PositionType.LONG);
-                
-                // For token symbols and names, we would need to query them separately
-                // But for now, we'll use mock data based on address hash
-                const addressHash = parseInt(address.slice(2, 10), 16);
-                
-                const pairs = [
-                    { loan: 'USDC', collateral: 'ETH' },
-                    { loan: 'DAI', collateral: 'BTC' },
-                    { loan: 'USDT', collateral: 'LINK' },
-                    { loan: 'WETH', collateral: 'MATIC' }
-                ];
-                
-                const pairIndex = addressHash % pairs.length;
-                const selectedPair = pairs[pairIndex];
-                
-                const tokenFullNames: Record<string, string> = {
-                    'USDC': 'USD Coin',
-                    'DAI': 'Dai Stablecoin',
-                    'USDT': 'Tether USD',
-                    'WETH': 'Wrapped Ether',
-                    'ETH': 'Ethereum',
-                    'BTC': 'Bitcoin',
-                    'LINK': 'Chainlink',
-                    'MATIC': 'Polygon'
-                };
-                
-                // Check if the pool is active
-                const isActive = poolStatusesData && 
-                    poolStatusesData[index]?.status === 'success' && 
+
+                const isActive = poolStatusesData &&
+                    poolStatusesData[index]?.status === 'success' &&
                     Boolean(poolStatusesData[index]?.result);
-                
+
                 return {
                     loanToken,
                     collateralToken,
                     loanTokenUsdDataFeed,
                     collateralTokenUsdDataFeed,
-                    loanTokenName: tokenFullNames[selectedPair.loan],
-                    loanTokenSymbol: selectedPair.loan,
-                    collateralTokenName: tokenFullNames[selectedPair.collateral],
-                    collateralTokenSymbol: selectedPair.collateral,
                     creator,
                     liquidationThresholdPercentage,
                     interestRate,
                     positionType,
-                    isActive: isActive !== undefined ? isActive : true
+                    isActive: isActive !== undefined ? isActive : true,
+                    loanTokenName: 'Unknown Token',
+                    loanTokenSymbol: 'UNKNOWN',
+                    collateralTokenName: 'Unknown Token',
+                    collateralTokenSymbol: 'UNKNOWN'
                 };
             });
-
-            console.log('Processed pool details:', poolArray);
-            setPools(poolArray);
-            setIsLoading(false);
-            setError(null);
+            setPoolBasicDetails(poolData);
         } catch (err) {
             console.error('Error processing pool details data:', err);
             setError(err instanceof Error ? err : new Error('Failed to process pool details'));
+
+            createMockPoolData(poolAddresses);
+        }
+    }, [poolDetailsData, poolStatusesData, poolAddresses]);
+                
+                // Now fetch token names and symbols
+    const { data: tokenDetailsData } = useReadContracts({
+        contracts: poolBasicDetails.flatMap(pool => [
+            // Loan token name
+            {
+                address: pool.loanToken,
+                abi: erc20Abi,
+                functionName: 'name',
+            },
+            // Loan token symbol
+            {
+                address: pool.loanToken,
+                abi: erc20Abi,
+                functionName: 'symbol',
+            },
+            // Loan token decimals
+            {
+                address: pool.loanToken,
+                abi: erc20Abi,
+                functionName: 'decimals',
+            },
+            // Collateral token name
+            {
+                address: pool.collateralToken,
+                abi: erc20Abi,
+                functionName: 'name',
+            },
+            // Collateral token symbol
+            {
+                address: pool.collateralToken,
+                abi: erc20Abi,
+                functionName: 'symbol',
+            },
+            // Collateral token decimals
+            {
+                address: pool.collateralToken,
+                abi: erc20Abi,
+                functionName: 'decimals',
+            },
+        ]),
+        query: {
+            enabled: poolBasicDetails.length > 0 && poolBasicDetails.some(pool => 
+                !!pool.loanToken && pool.loanToken !== '0x0000000000000000000000000000000000000000' && 
+                !!pool.collateralToken && pool.collateralToken !== '0x0000000000000000000000000000000000000000'
+            ),
+        }
+    });
+
+    // Process token details and complete pool data
+    useEffect(() => {
+        if (!tokenDetailsData || !poolBasicDetails.length) {
+            return;
+        }
+
+        try {
+            const completePools: PoolDetails[] = poolBasicDetails.map((pool, index) => {
+                const baseIndex = index * 6; // 6 token queries per pool
+                
+                // Default values in case token queries fail
+                let loanTokenName = 'Unknown Token';
+                let loanTokenSymbol = 'UNKNOWN';
+                let collateralTokenName = 'Unknown Token';
+                let collateralTokenSymbol = 'UNKNOWN';
+                
+                // Extract token details if available
+                if (tokenDetailsData[baseIndex]?.status === 'success') {
+                    loanTokenName = tokenDetailsData[baseIndex].result as string;
+                }
+                
+                if (tokenDetailsData[baseIndex + 1]?.status === 'success') {
+                    loanTokenSymbol = tokenDetailsData[baseIndex + 1].result as string;
+                }
+                
+                if (tokenDetailsData[baseIndex + 3]?.status === 'success') {
+                    collateralTokenName = tokenDetailsData[baseIndex + 3].result as string;
+                }
+                
+                if (tokenDetailsData[baseIndex + 4]?.status === 'success') {
+                    collateralTokenSymbol = tokenDetailsData[baseIndex + 4].result as string;
+                }
+                
+                return {
+                    ...pool,
+                    loanTokenName,
+                    loanTokenSymbol,
+                    collateralTokenName,
+                    collateralTokenSymbol,
+                } as PoolDetails;
+            });
+
+            console.log('Processed pool details with token info:', completePools);
+            setPools(completePools);
+            setIsLoading(false);
+            setError(null);
+        } catch (err) {
+            console.error('Error processing token details:', err);
+            setError(err instanceof Error ? err : new Error('Failed to process token details'));
             
             // Use mock data if processing fails
             createMockPoolData(poolAddresses);
         }
-    }, [poolDetailsData, poolStatusesData, poolAddresses]);
+    }, [tokenDetailsData, poolBasicDetails]);
 
     // Function to create mock data for development/fallback
     const createMockPoolData = useCallback((addresses?: Address[]) => {
