@@ -14,7 +14,7 @@ import { useAccount } from 'wagmi';
 const formatTokenAmount = (amount: bigint | undefined, decimals: number = 18) => {
     if (!amount) return '0.00';
     return Number(formatUnits(amount, decimals)).toLocaleString(undefined, {
-        maximumFractionDigits: 6,
+        maximumFractionDigits: 4,
         minimumFractionDigits: 2
     });
 };
@@ -208,7 +208,7 @@ export default function PoolDetailsPage() {
                         </div>
                         <div>
                             <p className="text-sm text-muted-foreground">Pool Created</p>
-                            <p className="font-medium">Feb 26, 2025</p>
+                            <p className="font-medium">Feb 27, 2025</p>
                         </div>
                     </div>
                 </div>

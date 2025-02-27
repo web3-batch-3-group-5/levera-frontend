@@ -4,7 +4,8 @@ import { useRouter } from 'next/navigation';
 import { usePosition } from '@/hooks/usePosition';
 import { Button } from '@/components/shared/Button';
 import { formatTokenAmount } from '@/lib/utils/format';
-import { Activity, TrendingUp, AlertCircle, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
+import { formatAddress } from '@/lib/utils';
+import { Activity, TrendingUp, AlertCircle, ArrowDownCircle, ArrowUpCircle, Info, Scale } from 'lucide-react';
 
 interface MarginCardProps {
     positionAddress: Address;
@@ -20,12 +21,9 @@ export function MarginCard({
     collateralTokenSymbol,
 }: MarginCardProps) {
     const router = useRouter();
-    const [showDetails, setShowDetails] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
 
-    // Define additional state for loading and error handling
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<Error | null>(null);
-
+    // Get position data
     const {
         baseCollateral,
         effectiveCollateral,
@@ -34,17 +32,19 @@ export function MarginCard({
         liquidationPrice,
         health,
         ltv,
+        isLoading,
+        error: positionError
     } = usePosition(positionAddress);
 
-    // Calculate net value (estimated USD value)
-    const netValue = effectiveCollateral ? Number(effectiveCollateral) * 1.2 : 0; // Using a placeholder price multiplier
+    // Calculate net value (estimated)
+    const netValue = effectiveCollateral ? Number(effectiveCollateral) * 1.2 : 0; // Simple placeholder calculation
 
     // Determine health status color and label
     let healthColor = 'text-green-500';
     let healthStatus = 'Healthy';
 
     if (health) {
-        const healthValue = Number(health) / 100; // Convert from basis points if needed
+        const healthValue = Number(health) / 100; // Convert from basis points
         if (healthValue < 1.1) {
             healthColor = 'text-red-500';
             healthStatus = 'At Risk';
@@ -55,7 +55,7 @@ export function MarginCard({
     }
 
     // Navigate to detailed view
-    const handleViewDetails = () => {
+    const handleClick = () => {
         router.push(`/margin/${lendingPoolAddress}/${positionAddress}`);
     };
 
@@ -76,183 +76,238 @@ export function MarginCard({
     };
 
     // Toggle expanded view
-    const toggleDetails = (e: React.MouseEvent) => {
+    const handleToggleExpand = (e: React.MouseEvent) => {
         e.stopPropagation();
-        setShowDetails(!showDetails);
+        setIsExpanded(!isExpanded);
     };
 
-    // Handle loading state
-    if (isLoading) {
+    const StatusBadge = () => (
+        <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 ${
+            healthColor.replace('text', 'bg')}-100 ${healthColor} dark:${healthColor.replace('text', 'bg')}-900/50`}>
+            <span className={`size-1.5 rounded-full ${healthColor.replace('text', 'bg')}`}></span>
+            {healthStatus}
+        </div>
+    );
+
+    if (positionError) {
         return (
-            <div className="border rounded-lg p-4 bg-card animate-pulse">
-                <div className="h-6 w-1/3 bg-muted rounded mb-4"></div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                    <div className="space-y-2">
-                        <div className="h-4 w-16 bg-muted rounded"></div>
-                        <div className="h-5 w-20 bg-muted rounded"></div>
+            <div className="bg-card rounded-lg border shadow-sm hover:shadow-md transition-shadow">
+                <div className="p-6 space-y-4">
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <h3 className="text-lg font-semibold">
+                                {loanTokenSymbol}/{collateralTokenSymbol} Position
+                            </h3>
+                            <p className="text-sm text-muted-foreground">
+                                Position ID: {formatAddress(positionAddress)}
+                            </p>
+                        </div>
+                        <StatusBadge />
                     </div>
-                    <div className="space-y-2">
-                        <div className="h-4 w-16 bg-muted rounded"></div>
-                        <div className="h-5 w-20 bg-muted rounded"></div>
+
+                    <div className="flex items-center gap-2 text-destructive">
+                        <AlertCircle className="size-4" />
+                        <span className="text-sm">Error loading position data</span>
                     </div>
-                    <div className="space-y-2">
-                        <div className="h-4 w-16 bg-muted rounded"></div>
-                        <div className="h-5 w-20 bg-muted rounded"></div>
-                    </div>
-                    <div className="space-y-2">
-                        <div className="h-4 w-16 bg-muted rounded"></div>
-                        <div className="h-5 w-20 bg-muted rounded"></div>
-                    </div>
+
+                    <Button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            router.push(`/margin/${lendingPoolAddress}/${positionAddress}`);
+                        }}
+                        className="w-full"
+                        variant="outline"
+                    >
+                        View Details
+                    </Button>
                 </div>
-                <div className="h-9 w-full bg-muted rounded"></div>
             </div>
         );
     }
 
-    // Handle error state
-    if (error) {
-        return (
-            <div className="border rounded-lg p-4 bg-card">
-                <div className="flex items-center gap-2 text-destructive mb-4">
-                    <AlertCircle className="size-5" />
-                    <span>Error loading position data</span>
+    // Base content (shown in both collapsed and expanded views)
+    const baseContent = (
+        <>
+            <div className="flex items-start justify-between">
+                <div>
+                    <h3 className="text-lg font-semibold">
+                        {loanTokenSymbol}/{collateralTokenSymbol} Position
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                        Position ID: {formatAddress(positionAddress)}
+                    </p>
                 </div>
-                <div className="flex justify-end">
-                    <Button size="sm" onClick={handleViewDetails}>View Details</Button>
-                </div>
+                <StatusBadge />
             </div>
-        );
-    }
 
-    return (
-        <div 
-            className="border rounded-lg bg-card overflow-hidden hover:shadow-md transition-shadow cursor-pointer" 
-            onClick={handleViewDetails}
-        >
-            <div className="p-4">
-                {/* Position Header */}
-                <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                        <div className="size-2 rounded-full bg-green-500"></div>
-                        <span className="font-medium">{loanTokenSymbol}/{collateralTokenSymbol}</span>
-                    </div>
-                    <div className={`px-2 py-1 rounded-full text-xs ${healthColor} bg-opacity-20 flex items-center gap-1`}>
-                        <span className={`size-1.5 rounded-full ${healthColor.replace('text', 'bg')}`}></span>
-                        {healthStatus}
-                    </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Scale className="size-4" />
+                        Net Value
+                    </p>
+                    {isLoading ? (
+                        <div className="h-5 bg-muted/50 rounded w-24 animate-pulse"></div>
+                    ) : (
+                        <p className="font-medium">
+                            ${formatTokenAmount(BigInt(Math.floor(netValue)), { decimals: 2 })}
+                        </p>
+                    )}
                 </div>
 
-                {/* Position Details */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                    <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground">Net Value</p>
-                        <p className="font-medium">${formatTokenAmount(BigInt(Math.floor(netValue)), { decimals: 2 })}</p>
-                    </div>
-
-                    <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Activity className="size-3" />
-                            Liquidation Price
+                <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <Activity className="size-4" />
+                        Liquidation Price
+                    </p>
+                    {isLoading ? (
+                        <div className="h-5 bg-muted/50 rounded w-24 animate-pulse"></div>
+                    ) : (
+                        <p className="font-medium">
+                            ${formatTokenAmount(liquidationPrice || 0n, { decimals: 4 })}
                         </p>
-                        <p className="font-medium">${formatTokenAmount(liquidationPrice || 0n, { decimals: 4 })}</p>
-                    </div>
+                    )}
+                </div>
 
-                    <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <AlertCircle className="size-3" />
-                            Health
-                        </p>
+                <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <AlertCircle className="size-4" />
+                        Health Factor
+                    </p>
+                    {isLoading ? (
+                        <div className="h-5 bg-muted/50 rounded w-16 animate-pulse"></div>
+                    ) : (
                         <p className={`font-medium ${healthColor}`}>
                             {health ? (Number(health) / 100).toFixed(2) : '0.00'}
                         </p>
-                    </div>
+                    )}
+                </div>
 
-                    <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground flex items-center gap-1">
-                            <TrendingUp className="size-3" />
-                            Leverage
-                        </p>
+                <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground flex items-center gap-1">
+                        <TrendingUp className="size-4" />
+                        Leverage
+                    </p>
+                    {isLoading ? (
+                        <div className="h-5 bg-muted/50 rounded w-16 animate-pulse"></div>
+                    ) : (
                         <p className="font-medium">
                             {leverage ? (Number(leverage) / 100).toFixed(2) : '1.00'}x
                         </p>
-                    </div>
+                    )}
+                </div>
+            </div>
+        </>
+    );
+
+    // Expanded content (only shown when expanded)
+    const expandedContent = isExpanded && (
+        <div className="mt-4 pt-4 border-t">
+            <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Base Collateral</p>
+                    <p className="font-medium">
+                        {formatTokenAmount(baseCollateral || 0n)} {collateralTokenSymbol}
+                    </p>
                 </div>
 
-                {/* Expanded Details (conditional) */}
-                {showDetails && (
-                    <div className="border-t pt-4 mb-4 grid grid-cols-2 md:grid-cols-4 gap-4">
-                        <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Base Collateral</p>
-                            <p className="font-medium">
-                                {formatTokenAmount(baseCollateral || 0n)} {collateralTokenSymbol}
-                            </p>
-                        </div>
+                <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Effective Collateral</p>
+                    <p className="font-medium">
+                        {formatTokenAmount(effectiveCollateral || 0n)} {collateralTokenSymbol}
+                    </p>
+                </div>
 
-                        <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Effective Collateral</p>
-                            <p className="font-medium">
-                                {formatTokenAmount(effectiveCollateral || 0n)} {collateralTokenSymbol}
-                            </p>
-                        </div>
+                <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">Borrowed Amount</p>
+                    <p className="font-medium">
+                        {formatTokenAmount(borrowShares || 0n)} {loanTokenSymbol}
+                    </p>
+                </div>
 
-                        <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">Borrowed Amount</p>
-                            <p className="font-medium">
-                                {formatTokenAmount(borrowShares || 0n)} {loanTokenSymbol}
-                            </p>
-                        </div>
+                <div className="space-y-1">
+                    <p className="text-sm text-muted-foreground">LTV (Loan to Value)</p>
+                    <p className="font-medium">
+                        {ltv ? (Number(ltv) / 10000).toFixed(2) : '0.00'}%
+                    </p>
+                </div>
+            </div>
 
-                        <div className="space-y-1">
-                            <p className="text-xs text-muted-foreground">LTV</p>
-                            <p className="font-medium">
-                                {ltv ? (Number(ltv) / 10000).toFixed(2) : '0.00'}
-                            </p>
-                        </div>
-                    </div>
-                )}
+            <div className="flex gap-2 mt-4">
+                <Button
+                    className="flex-1"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAddCollateral}
+                >
+                    <ArrowDownCircle className="size-4 mr-1" />
+                    Add Collateral
+                </Button>
+                <Button
+                    className="flex-1"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAdjustLeverage}
+                >
+                    <TrendingUp className="size-4 mr-1" />
+                    Adjust Leverage
+                </Button>
+                <Button
+                    className="flex-1"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleClosePosition}
+                >
+                    <ArrowUpCircle className="size-4 mr-1" />
+                    Close
+                </Button>
+            </div>
+        </div>
+    );
 
-                {/* Actions */}
-                <div className="flex justify-between items-center">
+    const collapsedButtons = !isExpanded && (
+        <div className="flex gap-2">
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddCollateral}
+            >
+                <ArrowDownCircle className="size-3.5 mr-1" />
+                Add
+            </Button>
+            <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleClosePosition}
+            >
+                <ArrowUpCircle className="size-3.5 mr-1" />
+                Close
+            </Button>
+        </div>
+    );
+
+    return (
+        <div
+            onClick={handleClick}
+            className="bg-card rounded-lg border shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+        >
+            <div className="p-6 space-y-4">
+                {baseContent}
+
+                {expandedContent}
+
+                <div className="flex items-center justify-between mt-4">
                     <Button
                         variant="ghost"
                         size="sm"
-                        onClick={toggleDetails}
-                        className="text-xs text-muted-foreground hover:text-foreground"
+                        onClick={handleToggleExpand}
+                        className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1"
                     >
-                        {showDetails ? 'Show less' : 'Show more'}
+                        <Info className="size-3.5" />
+                        {isExpanded ? 'Show less' : 'Show more'}
                     </Button>
 
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1"
-                            onClick={handleAddCollateral}
-                        >
-                            <ArrowDownCircle className="size-3.5" />
-                            <span className="hidden sm:inline">Add</span>
-                        </Button>
-
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1"
-                            onClick={handleAdjustLeverage}
-                        >
-                            <TrendingUp className="size-3.5" />
-                            <span className="hidden sm:inline">Adjust</span>
-                        </Button>
-
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            className="gap-1"
-                            onClick={handleClosePosition}
-                        >
-                            <ArrowUpCircle className="size-3.5" />
-                            <span className="hidden sm:inline">Close</span>
-                        </Button>
-                    </div>
+                    {collapsedButtons}
                 </div>
             </div>
         </div>

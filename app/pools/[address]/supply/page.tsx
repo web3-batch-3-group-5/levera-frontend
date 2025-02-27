@@ -1,4 +1,3 @@
-// app/pools/[address]/supply/page.tsx
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
@@ -21,24 +20,28 @@ export default function SupplyPage() {
     const { address: userAddress } = useAccount();
     const poolAddress = params.address as Address;
 
+    console.log('Page loaded - Pool Address:', poolAddress);
+    console.log('User Address:', userAddress);
+
     // State management
     const [amount, setAmount] = useState('');
     const [supplyAmount, setSupplyAmount] = useState<bigint>(0n);
     const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
     const [needsApproval, setNeedsApproval] = useState(false);
     const [checkingApproval, setCheckingApproval] = useState(false);
-    const [approvalComplete, setApprovalComplete] = useState(false);
 
     // Get pool details
     const { poolAddresses, pools } = useLendingPoolFactory();
+    console.log('Pool Addresses:', poolAddresses);
+
     const poolIndex = poolAddresses.findIndex(addr => addr.toLowerCase() === poolAddress.toLowerCase());
     const pool = poolIndex !== -1 ? pools[poolIndex] : undefined;
+    
+    console.log('Selected Pool:', pool);
 
     // Contract state
     const { writeContract, isPending: isSupplyPending } = useWriteContract();
-    const { data: receipt, isLoading: isConfirming } = useWaitForTransactionReceipt({
-        hash: txHash,
-    });
+    const { data: receipt, isLoading: isConfirming } = useWaitForTransactionReceipt({ hash: txHash });
 
     // Check token balance and allowance
     const { data: tokenBalance } = useReadContract({
@@ -55,6 +58,9 @@ export default function SupplyPage() {
         args: [userAddress || zeroAddress, poolAddress],
     });
 
+    console.log('Token Balance:', tokenBalance);
+    console.log('Current Allowance:', currentAllowance);
+
     // Check if approval is needed
     useEffect(() => {
         const checkApproval = async () => {
@@ -63,8 +69,10 @@ export default function SupplyPage() {
             try {
                 setCheckingApproval(true);
                 await refetchAllowance();
+                console.log('Allowance Refetched:', currentAllowance);
 
                 setNeedsApproval(currentAllowance !== undefined && currentAllowance < parseUnits(amount, 18));
+                console.log('Needs Approval:', needsApproval);
             } catch (error) {
                 console.error('Error checking allowance:', error);
             } finally {
@@ -74,7 +82,7 @@ export default function SupplyPage() {
 
         checkApproval();
     }, [amount, userAddress, currentAllowance, pool, refetchAllowance]);
-        
+
     // Update supplyAmount when amount changes
     useEffect(() => {
         if (!amount) {
@@ -84,16 +92,18 @@ export default function SupplyPage() {
 
         try {
             const parsedAmount = parseUnits(amount, 18);
+            console.log('Parsed Amount:', parsedAmount);
             setSupplyAmount(parsedAmount);
         } catch (error) {
             console.error('Error parsing amount:', error);
         }
     }, [amount]);
 
-
     // Watch for transaction completion
     useEffect(() => {
         if (receipt?.status === 'success') {
+            console.log('Transaction Successful:', receipt);
+
             toast.dismiss('tx-confirm');
             
             if (needsApproval) {
@@ -113,6 +123,7 @@ export default function SupplyPage() {
         if (!pool) return;
 
         try {
+            console.log('Approving tokens...');
             toast.loading('Please confirm the approval in your wallet...', { id: 'approve-confirm' });
 
             writeContract({
@@ -126,6 +137,7 @@ export default function SupplyPage() {
                     setTxHash(hash); 
                     toast.dismiss('approve-confirm');
                     toast.loading('Approval transaction submitted...', { id: 'approve-wait' });
+                    toast.dismiss('approve-wait');
                 },
                 onError: (error) => {
                     console.error('Approval Error:', error);
@@ -148,7 +160,7 @@ export default function SupplyPage() {
         }
 
         try {
-            console.log('Preparing supply transaction:', {
+            console.log('Supplying tokens...', {
                 amount: supplyAmount.toString(),
                 poolAddress,
                 userAddress
@@ -166,9 +178,7 @@ export default function SupplyPage() {
                     console.log('Supply transaction hash:', hash);
                     setTxHash(hash);
                     toast.dismiss('tx-confirm');
-                    toast.loading('Transaction submitted, waiting for confirmation...', {
-                        id: 'tx-confirm'
-                    });
+                    toast.loading('Transaction submitted, waiting for confirmation...', { id: 'tx-confirm' });
                 },
                 onError: (error) => {
                     console.error('Supply Error:', error);

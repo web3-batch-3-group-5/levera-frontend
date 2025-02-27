@@ -16,7 +16,7 @@ export function formatTokenAmount(
     const {
         decimals = 18,
         minimumFractionDigits = 2,
-        maximumFractionDigits = 6,
+        maximumFractionDigits = 4,
         compact = false
     } = options;
 

@@ -1,4 +1,3 @@
-// hooks/usePositionFactory.ts
 'use client';
 
 import { useCallback, useState, useEffect } from 'react';
@@ -6,40 +5,40 @@ import { useReadContract, useWriteContract, useAccount } from 'wagmi';
 import { Address } from 'viem';
 import { CONTRACTS } from '@/config/contracts';
 import { toast } from 'sonner';
-import { Position } from '@/graphql/types';
+import { usePosition } from '@/hooks/usePosition';
 
 // Extended position type for internal use
-interface ExtendedPosition extends Position {
-    // If address isn't in the original Position type, add it here
-    address?: Address;
+interface PositionData {
+    address: Address;
+    lendingPoolAddress?: Address;
+    healthFactor?: number;
+    leverage?: number;
+    liquidationPrice?: string;
 }
 
 export function usePositionFactory() {
-    const { address: userAddress } = useAccount();
-    const [userPositions, setUserPositions] = useState<Position[]>([]);
+    const { address: userAddress, isConnected } = useAccount();
+    const [userPositions, setUserPositions] = useState<PositionData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    const { writeContract, isPending: isCreatingPosition } = useWriteContract();
-
-    // Check if a position exists for a given lending pool and user
-    const { data: positionExists, refetch: refetchPosition } = useReadContract({
+    // Read positions directly from the contract
+    const { data: positionAddresses, isLoading: isLoadingAddresses, refetch: refetchPositionAddresses } = useReadContract({
         address: CONTRACTS.POSITION_FACTORY.address,
         abi: CONTRACTS.POSITION_FACTORY.abi,
-        functionName: 'positions',
-        args: [
-            userAddress || '0x0000000000000000000000000000000000000000' as Address,
-            userAddress || '0x0000000000000000000000000000000000000000' as Address
-        ],
+        functionName: 'getUserPositions',
+        args: [userAddress || '0x0000000000000000000000000000000000000000' as Address],
         query: {
-            enabled: !!userAddress,
+            enabled: !!userAddress && isConnected,
         }
     });
 
+    const { writeContract, isPending: isCreatingPosition } = useWriteContract();
+
     // Load user positions
     useEffect(() => {
-        const fetchUserPositions = async () => {
-            if (!userAddress) {
+        const fetchPositionDetails = async () => {
+            if (!userAddress || !isConnected || !positionAddresses || positionAddresses.length === 0) {
                 setUserPositions([]);
                 setIsLoading(false);
                 return;
@@ -48,56 +47,13 @@ export function usePositionFactory() {
             setIsLoading(true);
 
             try {
-                // In a real app, this would fetch from your subgraph or other data source
-                // For now, we'll create some dummy positions
-                const dummyPositions: Position[] = [
-                    {
-                        id: '1',
-                        user: userAddress,
-                        collateralAmount: '1000000000000000000', // 1 Token
-                        borrowedAmount: '500000000000000000', // 0.5 Token
-                        healthFactor: '144', // 1.44
-                        liquidationPrice: '850000000000000000', // 0.85 Token
-                        leverage: '150', // 1.5x
-                        createdAt: (Math.floor(Date.now() / 1000) - 3600).toString(), // 1 hour ago
-                        pool: {
-                            id: '1',
-                            loanToken: {
-                                symbol: 'USDC',
-                                decimals: 6
-                            },
-                            collateralToken: {
-                                symbol: 'ETH',
-                                decimals: 18
-                            }
-                        }
-                    },
-                    {
-                        id: '2',
-                        user: userAddress,
-                        collateralAmount: '5000000000000000000', // 5 Token
-                        borrowedAmount: '2000000000000000000', // 2 Token
-                        healthFactor: '157', // 1.57
-                        liquidationPrice: '350000000000000000', // 0.35 Token
-                        leverage: '140', // 1.4x
-                        createdAt: (Math.floor(Date.now() / 1000) - 86400).toString(), // 1 day ago
-                        pool: {
-                            id: '2',
-                            loanToken: {
-                                symbol: 'DAI',
-                                decimals: 18
-                            },
-                            collateralToken: {
-                                symbol: 'BTC',
-                                decimals: 8
-                            }
-                        }
-                    },
-
-                    // Add more dummy positions here if needed
-                ];
-
-                setUserPositions(dummyPositions);
+                // Create basic position objects with addresses
+                const positionsWithAddresses: PositionData[] = positionAddresses.map(address => ({
+                    address,
+                    // Position data will be loaded from the position contract
+                }));
+                
+                setUserPositions(positionsWithAddresses);
                 setError(null);
             } catch (err) {
                 console.error('Error fetching user positions:', err);
@@ -107,27 +63,14 @@ export function usePositionFactory() {
             }
         };
 
-        fetchUserPositions();
-    }, [userAddress]);
+        fetchPositionDetails();
+    }, [userAddress, isConnected, positionAddresses]);
 
     // Refresh function to manually trigger data refetch
     const refresh = useCallback(async () => {
         try {
             setIsLoading(true);
-
-            // In a real app, this would refetch from your subgraph or other data source
-            // For now, we'll just simulate a delay
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            await refetchPosition();
-
-            // Since we're using dummy data, update the lastUpdated timestamp to simulate refresh
-            setUserPositions(prev => prev.map(position => ({
-                ...position,
-                createdAt: Math.floor(Date.now() / 1000).toString()
-            })));
-
-            setError(null);
+            await refetchPositionAddresses();
             return true;
         } catch (err) {
             console.error('Error refreshing positions:', err);
@@ -136,7 +79,7 @@ export function usePositionFactory() {
         } finally {
             setIsLoading(false);
         }
-    }, [refetchPosition]);
+    }, [refetchPositionAddresses]);
 
     // Create a new position
     const createPosition = useCallback(async (
@@ -230,38 +173,31 @@ export function usePositionFactory() {
         }
     }, [writeContract, userAddress, refresh]);
 
-    // Get a position by ID
-    const getPositionById = useCallback((positionId: string) => {
-        return userPositions.find(position => position.id === positionId);
-    }, [userPositions]);
-
-    // Get positions by lending pool id
-    const getPositionsByPoolId = useCallback((poolId: string) => {
-        return userPositions.filter(position =>
-            position.pool.id === poolId
+    // Get a position by address
+    const getPositionByAddress = useCallback((positionAddress: Address) => {
+        return userPositions.find(position => 
+            position.address.toLowerCase() === positionAddress.toLowerCase()
         );
     }, [userPositions]);
 
-    // Map position ID to position address (for components that need address)
-    const getPositionAddressById = useCallback((positionId: string): Address => {
-        // This is a mock function - in a real app, you would have a proper mapping
-        // or fetch this from the blockchain
-        return `0x${positionId.padStart(40, '0')}` as Address;
-    }, []);
+    // Get positions for a specific lending pool
+    const getPositionsByLendingPool = useCallback((lendingPoolAddress: Address) => {
+        return userPositions.filter(position => 
+            position.lendingPoolAddress?.toLowerCase() === lendingPoolAddress.toLowerCase()
+        );
+    }, [userPositions]);
 
     return {
         // Position state
         userPositions,
         isLoading,
         error,
-        positionExists,
-
+        
         // Position actions
         createPosition,
         deletePosition,
-        getPositionById,
-        getPositionsByPoolId,
-        getPositionAddressById,
+        getPositionByAddress,
+        getPositionsByLendingPool,
         refresh,
 
         // Loading states
