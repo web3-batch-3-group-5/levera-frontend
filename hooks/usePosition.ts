@@ -18,7 +18,7 @@ export function usePosition(positionAddress: Address | string | undefined) {
     
     // Convert to proper Address type if valid
     const validatedAddress = isValidAddress ? positionAddress as Address : undefined;
-    
+
     console.log(`[usePosition] Initializing with address: ${positionAddress}, valid: ${isValidAddress}`);
     
     // Individual read contract calls for each property
@@ -258,8 +258,6 @@ export function usePosition(positionAddress: Address | string | undefined) {
             refetchLastUpdated(),
             refetchLendingPool()
         ]);
-        
-        console.log("Position data refreshed");
     }, [
         validatedAddress,
         refetchBaseCollateral,

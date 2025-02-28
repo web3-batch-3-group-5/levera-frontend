@@ -38,9 +38,10 @@ export default function CreatePoolPage() {
     const { writeContract, isPending } = useWriteContract();
 
     // Transaction confirmation
-    const { isLoading: isConfirming, data: receipt } = useWaitForTransactionReceipt({
-        hash: txHash,
-    });
+    const { isLoading: isConfirming, data: receipt } =
+        useWaitForTransactionReceipt({
+            hash: txHash,
+        });
 
     // Watch for receipt and handle completion
     useEffect(() => {
@@ -75,7 +76,9 @@ export default function CreatePoolPage() {
     };
 
     const validatePercentages = (data: FormData): boolean => {
-        const liquidationThreshold = Number(data.liquidationThresholdPercentage);
+        const liquidationThreshold = Number(
+            data.liquidationThresholdPercentage
+        );
         const interestRate = Number(data.interestRate);
 
         if (liquidationThreshold < 0 || liquidationThreshold > 100) {
@@ -93,7 +96,6 @@ export default function CreatePoolPage() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        console.log('Form submitted', formData);
 
         if (!validateAddresses(formData) || !validatePercentages(formData)) {
             return;
@@ -101,42 +103,50 @@ export default function CreatePoolPage() {
 
         try {
             toast.loading('Please confirm the transaction in your wallet...', {
-                id: 'wallet-confirm'
+                id: 'wallet-confirm',
             });
 
             // Convert percentages to contract format
             // 80% => 80 (since contract expects 0-100)
-            const liquidationThreshold = parseUnits(formData.liquidationThresholdPercentage, 0);
+            const liquidationThreshold = parseUnits(
+                formData.liquidationThresholdPercentage,
+                0
+            );
             const interestRate = parseUnits(formData.interestRate, 0);
 
-            writeContract({
-                address: CONTRACTS.LENDING_POOL_FACTORY.address,
-                abi: CONTRACTS.LENDING_POOL_FACTORY.abi,
-                functionName: 'createLendingPool',
-                args: [
-                    formData.loanToken as Address,
-                    formData.collateralToken as Address,
-                    formData.loanTokenUsdDataFeed as Address,
-                    formData.collateralTokenUsdDataFeed as Address,
-                    liquidationThreshold,
-                    interestRate,
-                    formData.positionType,
-                ],
-            }, {
-                onSuccess: (hash) => {
-                    console.log('Transaction Hash:', hash);
-                    setTxHash(hash);
-                    toast.dismiss('wallet-confirm');
-                    toast.loading('Transaction submitted, waiting for confirmation...', {
-                        id: 'tx-confirm'
-                    });
+            writeContract(
+                {
+                    address: CONTRACTS.LENDING_POOL_FACTORY.address,
+                    abi: CONTRACTS.LENDING_POOL_FACTORY.abi,
+                    functionName: 'createLendingPool',
+                    args: [
+                        formData.loanToken as Address,
+                        formData.collateralToken as Address,
+                        formData.loanTokenUsdDataFeed as Address,
+                        formData.collateralTokenUsdDataFeed as Address,
+                        liquidationThreshold,
+                        interestRate,
+                        formData.positionType,
+                    ],
                 },
-                onError: (error) => {
-                    console.error('Transaction Error:', error);
-                    toast.dismiss('wallet-confirm');
-                    toast.error('Failed to create pool: ' + error.message);
+                {
+                    onSuccess: (hash) => {
+                        setTxHash(hash);
+                        toast.dismiss('wallet-confirm');
+                        toast.loading(
+                            'Transaction submitted, waiting for confirmation...',
+                            {
+                                id: 'tx-confirm',
+                            }
+                        );
+                    },
+                    onError: (error) => {
+                        console.error('Transaction Error:', error);
+                        toast.dismiss('wallet-confirm');
+                        toast.error('Failed to create pool: ' + error.message);
+                    },
                 }
-            });
+            );
         } catch (error: unknown) {
             console.error('Error details:', error);
             toast.dismiss('wallet-confirm');
@@ -144,9 +154,11 @@ export default function CreatePoolPage() {
             if (error && typeof error === 'object' && 'message' in error) {
                 const errorMessage = error.message as string;
 
-                if (errorMessage.toLowerCase().includes('rejected') ||
+                if (
+                    errorMessage.toLowerCase().includes('rejected') ||
                     errorMessage.toLowerCase().includes('denied') ||
-                    errorMessage.toLowerCase().includes('cancelled')) {
+                    errorMessage.toLowerCase().includes('cancelled')
+                ) {
                     toast.error('Transaction rejected in wallet');
                 } else {
                     toast.error(`Failed to create pool: ${errorMessage}`);
@@ -157,11 +169,13 @@ export default function CreatePoolPage() {
         }
     };
 
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const handleInputChange = (
+        e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    ) => {
         const { name, value } = e.target;
-        setFormData(prev => ({
+        setFormData((prev) => ({
             ...prev,
-            [name]: value
+            [name]: value,
         }));
     };
 
@@ -172,211 +186,237 @@ export default function CreatePoolPage() {
     };
 
     return (
-        <main className="container mx-auto px-4 py-8">
+        <main className='container mx-auto px-4 py-8'>
             <Button
-                variant="ghost"
-                className="mb-6"
+                variant='ghost'
+                className='mb-6'
                 onClick={() => router.back()}
                 disabled={isPending || isConfirming}
             >
-                <ArrowLeft className="size-4 mr-2" />
+                <ArrowLeft className='size-4 mr-2' />
                 Back to Pools
             </Button>
 
-            <div className="max-w-2xl mx-auto">
-                <div className="bg-card rounded-lg border p-6 space-y-6">
+            <div className='max-w-2xl mx-auto'>
+                <div className='bg-card rounded-lg border p-6 space-y-6'>
                     <div>
-                        <h1 className="text-2xl font-bold mb-2">Create New Pool</h1>
-                        <p className="text-sm text-muted-foreground">
-                            Create a new lending pool by providing token and price feed addresses
+                        <h1 className='text-2xl font-bold mb-2'>
+                            Create New Pool
+                        </h1>
+                        <p className='text-sm text-muted-foreground'>
+                            Create a new lending pool by providing token and
+                            price feed addresses
                         </p>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div className="space-y-4">
+                    <form onSubmit={handleSubmit} className='space-y-6'>
+                        <div className='space-y-4'>
                             <div>
-                                <label className="block text-sm font-medium mb-2">
+                                <label className='block text-sm font-medium mb-2'>
                                     Loan Token Address
                                 </label>
                                 <input
-                                    type="text"
-                                    name="loanToken"
+                                    type='text'
+                                    name='loanToken'
                                     value={formData.loanToken}
                                     onChange={handleInputChange}
-                                    placeholder="0x..."
-                                    className="w-full px-4 py-2 bg-background border rounded-md"
+                                    placeholder='0x...'
+                                    className='w-full px-4 py-2 bg-background border rounded-md'
                                     required
                                     disabled={isPending || isConfirming}
                                 />
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <p className='text-xs text-muted-foreground mt-1'>
                                     The token that will be supplied and borrowed
                                 </p>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-2">
+                                <label className='block text-sm font-medium mb-2'>
                                     Collateral Token Address
                                 </label>
                                 <input
-                                    type="text"
-                                    name="collateralToken"
+                                    type='text'
+                                    name='collateralToken'
                                     value={formData.collateralToken}
                                     onChange={handleInputChange}
-                                    placeholder="0x..."
-                                    className="w-full px-4 py-2 bg-background border rounded-md"
+                                    placeholder='0x...'
+                                    className='w-full px-4 py-2 bg-background border rounded-md'
                                     required
                                     disabled={isPending || isConfirming}
                                 />
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <p className='text-xs text-muted-foreground mt-1'>
                                     The token that will be used as collateral
                                 </p>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-2">
+                                <label className='block text-sm font-medium mb-2'>
                                     Loan Token Price Feed
                                 </label>
                                 <input
-                                    type="text"
-                                    name="loanTokenUsdDataFeed"
+                                    type='text'
+                                    name='loanTokenUsdDataFeed'
                                     value={formData.loanTokenUsdDataFeed}
                                     onChange={handleInputChange}
-                                    placeholder="0x..."
-                                    className="w-full px-4 py-2 bg-background border rounded-md"
+                                    placeholder='0x...'
+                                    className='w-full px-4 py-2 bg-background border rounded-md'
                                     required
                                     disabled={isPending || isConfirming}
                                 />
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Chainlink price feed address for the loan token
+                                <p className='text-xs text-muted-foreground mt-1'>
+                                    Chainlink price feed address for the loan
+                                    token
                                 </p>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-2">
+                                <label className='block text-sm font-medium mb-2'>
                                     Collateral Token Price Feed
                                 </label>
                                 <input
-                                    type="text"
-                                    name="collateralTokenUsdDataFeed"
+                                    type='text'
+                                    name='collateralTokenUsdDataFeed'
                                     value={formData.collateralTokenUsdDataFeed}
                                     onChange={handleInputChange}
-                                    placeholder="0x..."
-                                    className="w-full px-4 py-2 bg-background border rounded-md"
+                                    placeholder='0x...'
+                                    className='w-full px-4 py-2 bg-background border rounded-md'
                                     required
                                     disabled={isPending || isConfirming}
                                 />
-                                <p className="text-xs text-muted-foreground mt-1">
-                                    Chainlink price feed address for the collateral token
+                                <p className='text-xs text-muted-foreground mt-1'>
+                                    Chainlink price feed address for the
+                                    collateral token
                                 </p>
                             </div>
 
                             <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <label className="block text-sm font-medium">
+                                <div className='flex justify-between items-center mb-2'>
+                                    <label className='block text-sm font-medium'>
                                         Liquidation Threshold (%)
                                     </label>
-                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                                        <span>{formData.liquidationThresholdPercentage}%</span>
+                                    <div className='flex items-center gap-1 text-sm text-muted-foreground'>
+                                        <span>
+                                            {
+                                                formData.liquidationThresholdPercentage
+                                            }
+                                            %
+                                        </span>
                                     </div>
                                 </div>
                                 <input
-                                    type="range"
-                                    name="liquidationThresholdPercentage"
-                                    value={formData.liquidationThresholdPercentage}
+                                    type='range'
+                                    name='liquidationThresholdPercentage'
+                                    value={
+                                        formData.liquidationThresholdPercentage
+                                    }
                                     onChange={handleInputChange}
-                                    min="1"
-                                    max="100"
-                                    step="1"
-                                    className="w-full"
+                                    min='1'
+                                    max='100'
+                                    step='1'
+                                    className='w-full'
                                     disabled={isPending || isConfirming}
                                 />
-                                <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                                <div className='flex justify-between text-xs text-muted-foreground mt-1'>
                                     <span>0%</span>
                                     <span>50%</span>
                                     <span>100%</span>
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                                    <Info className="size-3" />
-                                    The percentage threshold for liquidation (e.g., 80 means 0.8 or 80%)
+                                <p className='text-xs text-muted-foreground mt-2 flex items-center gap-1'>
+                                    <Info className='size-3' />
+                                    The percentage threshold for liquidation
+                                    (e.g., 80 means 0.8 or 80%)
                                 </p>
                             </div>
 
                             <div>
-                                <div className="flex justify-between items-center mb-2">
-                                    <label className="block text-sm font-medium">
+                                <div className='flex justify-between items-center mb-2'>
+                                    <label className='block text-sm font-medium'>
                                         Interest Rate (%)
                                     </label>
-                                    <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                                    <div className='flex items-center gap-1 text-sm text-muted-foreground'>
                                         <span>{formData.interestRate}%</span>
                                     </div>
                                 </div>
                                 <input
-                                    type="range"
-                                    name="interestRate"
+                                    type='range'
+                                    name='interestRate'
                                     value={formData.interestRate}
                                     onChange={handleInputChange}
-                                    min="0"
-                                    max="100"
-                                    step="1"
-                                    className="w-full"
+                                    min='0'
+                                    max='100'
+                                    step='1'
+                                    className='w-full'
                                     disabled={isPending || isConfirming}
                                 />
-                                <div className="flex justify-between text-xs text-muted-foreground mt-1">
+                                <div className='flex justify-between text-xs text-muted-foreground mt-1'>
                                     <span>0%</span>
                                     <span>50%</span>
                                     <span>100%</span>
                                 </div>
-                                <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
-                                    <Info className="size-3" />
-                                    The interest rate percentage (e.g., 10 means 10%)
+                                <p className='text-xs text-muted-foreground mt-2 flex items-center gap-1'>
+                                    <Info className='size-3' />
+                                    The interest rate percentage (e.g., 10 means
+                                    10%)
                                 </p>
                             </div>
 
                             <div>
-                                <label className="block text-sm font-medium mb-2">
+                                <label className='block text-sm font-medium mb-2'>
                                     Position Type
                                 </label>
                                 <select
-                                    name="positionType"
+                                    name='positionType'
                                     value={formData.positionType}
                                     onChange={handleInputChange}
-                                    className="w-full px-4 py-2 bg-background border rounded-md"
+                                    className='w-full px-4 py-2 bg-background border rounded-md'
                                     required
                                     disabled={isPending || isConfirming}
                                 >
-                                    <option value={PositionType.LONG}>Long</option>
-                                    <option value={PositionType.SHORT}>Short</option>
+                                    <option value={PositionType.LONG}>
+                                        Long
+                                    </option>
+                                    <option value={PositionType.SHORT}>
+                                        Short
+                                    </option>
                                 </select>
-                                <p className="text-xs text-muted-foreground mt-1">
+                                <p className='text-xs text-muted-foreground mt-1'>
                                     The type of position this pool supports
                                 </p>
                             </div>
                         </div>
 
                         {/* Additional info box */}
-                        <div className="bg-muted/50 rounded-lg p-4 space-y-2 text-sm">
-                            <div className="flex items-start gap-2">
-                                <AlertTriangle className="size-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                        <div className='bg-muted/50 rounded-lg p-4 space-y-2 text-sm'>
+                            <div className='flex items-start gap-2'>
+                                <AlertTriangle className='size-4 text-amber-500 flex-shrink-0 mt-0.5' />
                                 <div>
-                                    <p className="font-medium mb-1">Important Information</p>
-                                    <p className="text-muted-foreground text-xs">
-                                        Make sure you've verified the token addresses and price feeds. Once created, pool parameters cannot be changed.
+                                    <p className='font-medium mb-1'>
+                                        Important Information
+                                    </p>
+                                    <p className='text-muted-foreground text-xs'>
+                                        Make sure you've verified the token
+                                        addresses and price feeds. Once created,
+                                        pool parameters cannot be changed.
                                     </p>
                                 </div>
                             </div>
-                            
+
                             {txHash && (
-                                <div className="pt-2 mt-2 border-t border-border">
-                                    <p className="text-xs text-muted-foreground">Transaction Hash:</p>
-                                    <p className="font-mono text-xs break-all">{txHash}</p>
+                                <div className='pt-2 mt-2 border-t border-border'>
+                                    <p className='text-xs text-muted-foreground'>
+                                        Transaction Hash:
+                                    </p>
+                                    <p className='font-mono text-xs break-all'>
+                                        {txHash}
+                                    </p>
                                 </div>
                             )}
                         </div>
 
                         <Button
-                            type="submit"
-                            className="w-full"
-                            size="lg"
+                            type='submit'
+                            className='w-full'
+                            size='lg'
                             disabled={isPending || isConfirming}
                         >
                             {getButtonText()}
