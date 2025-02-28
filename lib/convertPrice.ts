@@ -8,10 +8,23 @@ import AggregatorV3InterfaceABI from "@chainlink/contracts/abi/v0.8/AggregatorV3
 //   transport: http("https://eth-sepolia.g.alchemy.com/v2/AGCKLQQJ44DToAoLdZbXDWaT5faaaZGh"),
 // });
 
+// temporary price converter
+const priceConverter: { [key: string]: number } = {
+  'laUSDC': 1,
+  'laUSDT': 1,
+  'laDAI': 1,
+  'laETH': 2500,
+  'laWBTC': 100_000,
+};
+
 const publicClient = createPublicClient({
   chain: sepolia,
   transport: http(process.env.VITE_ALCHEMY_RPC_URL),
 });
+
+export function convertPrice(tokenSymbolIn: string, tokenSymbolOut: string, amount: number): number {
+  return priceConverter[tokenSymbolOut] * amount / priceConverter[tokenSymbolIn];
+}
 
 export async function getPrice(token: string): Promise<{ price: BigNumber; decimals: number }> {
   if (token === "USD" || token === "USDC") return { price: new BigNumber(1), decimals: 8 };
