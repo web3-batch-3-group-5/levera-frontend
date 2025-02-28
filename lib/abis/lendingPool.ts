@@ -170,15 +170,9 @@ export const lendingPoolABI = [
                 "internalType": "uint256",
                 "name": "totalCollateral",
                 "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "utilizationRate",
-                "type": "uint256"
             }
         ],
-        "name": "LendingPoolStats",
+        "name": "LendingPoolStat",
         "type": "event"
     },
     {
@@ -437,19 +431,6 @@ export const lendingPoolABI = [
             }
         ],
         "name": "getLiquidationPrice",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "getUtilizationRate",
         "outputs": [
             {
                 "internalType": "uint256",

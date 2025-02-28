@@ -450,7 +450,13 @@ export const positionABI = [
     {
         "inputs": [],
         "name": "closePosition",
-        "outputs": [],
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
         "stateMutability": "nonpayable",
         "type": "function"
     },
@@ -642,12 +648,12 @@ export const positionABI = [
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "amount",
+                "name": "_baseCollateral",
                 "type": "uint256"
             },
             {
                 "internalType": "uint256",
-                "name": "debt",
+                "name": "_leverage",
                 "type": "uint256"
             }
         ],
@@ -683,18 +689,7 @@ export const positionABI = [
         "type": "function"
     },
     {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "_effectiveCollateral",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "_borrowAmount",
-                "type": "uint256"
-            }
-        ],
+        "inputs": [],
         "name": "setRiskInfo",
         "outputs": [],
         "stateMutability": "nonpayable",
