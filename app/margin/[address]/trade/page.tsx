@@ -27,6 +27,11 @@ export default function MarginTradePage() {
     const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
     const [needsApproval, setNeedsApproval] = useState(true);
     const [approvalStep, setApprovalStep] = useState<'none' | 'wallet' | 'factory'>('none');
+    const [isClient, setIsClient] = useState(false);
+
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
 
     // Get pool data
     const { poolAddresses, pools } = useLendingPoolFactory();
@@ -205,13 +210,23 @@ export default function MarginTradePage() {
         }
     };
 
-    // Open position
+    // Open position with fixed leverage conversion
     const handleOpenPosition = async () => {
         if (!collateralAmount || !pool || !userAddress) return;
 
         try {
             const collateralAmountBigInt = parseUnits(collateralAmount, 18);
+            
+            // Convert leverage from decimal (e.g., 1.5) to basis points (e.g., 150)
+            // Important: Contract expects leverage in basis points (100 = 1x)
             const leverageBasisPoints = BigInt(Math.floor(leverage * 100));
+
+            console.log('Creating position with:', {
+                poolAddress,
+                collateralAmount: collateralAmountBigInt.toString(),
+                leverageUI: leverage,
+                leverageBasisPoints: leverageBasisPoints.toString()
+            });
 
             toast.loading('Creating position...', { id: 'create-position' });
 
@@ -222,7 +237,7 @@ export default function MarginTradePage() {
                 args: [
                     poolAddress, 
                     collateralAmountBigInt, 
-                    leverageBasisPoints
+                    leverageBasisPoints // Fixed: Send basis points to contract (e.g., 150 for 1.5x)
                 ],
             }, {
                 onSuccess: (hash) => {
@@ -301,15 +316,15 @@ export default function MarginTradePage() {
             <div className="max-w-xl mx-auto">
                 <div className="bg-card rounded-lg border p-6 space-y-6">
                     <div>
-                        <h1 className="text-xl font-bold mb-2">{pool.loanTokenSymbol}/{pool.collateralTokenSymbol} Trade</h1>
-                        <p className="text-sm text-muted-foreground">
+                        <h1 className="text-xl font-bold mb-2 px-2">{pool.loanTokenSymbol}/{pool.collateralTokenSymbol} Trade</h1>
+                        <p className="text-sm text-muted-foreground px-2">
                             Open a margin position with this pool
                         </p>
                     </div>
 
                     {/* Collateral Input */}
                     <div className="space-y-4">
-                        <div className="flex justify-between items-center">
+                        <div className="flex justify-between items-center px-2">
                             <h2 className="text-lg font-medium">Collateral</h2>
                             <div className="text-sm text-muted-foreground">
                                 Balance: {formatTokenAmount(walletBalance || 0n)} {pool.collateralTokenSymbol}
@@ -326,7 +341,7 @@ export default function MarginTradePage() {
                                 disabled={isWritePending || isConfirming}
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                <span className="text-sm font-medium">{pool.collateralTokenSymbol}</span>
+                                <span className="text-sm font-medium pr-6">{pool.collateralTokenSymbol}</span>
                             </div>
                         </div>
 
@@ -354,13 +369,13 @@ export default function MarginTradePage() {
 
                     {/* Leverage Slider */}
                     <div className="space-y-2">
-                        <div className="flex justify-between">
+                        <div className="flex justify-between px-2">
                             <span>Leverage</span>
                             <span>{leverage.toFixed(2)}x</span>
                         </div>
                         <input
                             type="range"
-                            min="1"
+                            min="1.1"
                             max="3"
                             step="0.1"
                             value={leverage}
@@ -368,7 +383,7 @@ export default function MarginTradePage() {
                             className="w-full"
                             disabled={isWritePending || isConfirming}
                         />
-                        <div className="flex justify-between text-xs text-muted-foreground">
+                        <div className="flex justify-between text-xs text-muted-foreground px-1">
                             <span>1x</span>
                             <span>2x</span>
                             <span>3x</span>
@@ -379,11 +394,11 @@ export default function MarginTradePage() {
                     <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                         <div className="flex justify-between">
                             <span className="text-sm text-muted-foreground">Base Collateral</span>
-                            <span>{parseFloat(collateralAmount || '0').toFixed(4)} {pool.collateralTokenSymbol}</span>
+                            <span>{parseFloat(collateralAmount || '0').toFixed(4)} {pool?.collateralTokenSymbol}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-sm text-muted-foreground">Effective Collateral</span>
-                            <span>{positionDetails.effectiveCollateral.toFixed(4)} {pool.collateralTokenSymbol}</span>
+                            <span>{positionDetails.effectiveCollateral.toFixed(4)} {pool?.collateralTokenSymbol}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-sm text-muted-foreground">Borrow Amount</span>

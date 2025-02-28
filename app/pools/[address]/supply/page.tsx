@@ -61,18 +61,29 @@ export default function SupplyPage() {
     console.log('Token Balance:', tokenBalance);
     console.log('Current Allowance:', currentAllowance);
 
-    // Check if approval is needed
+    // Check if approval is needed whenever amount or allowance changes
     useEffect(() => {
         const checkApproval = async () => {
-            if (!pool || !userAddress) return;
+            if (!pool || !userAddress || !amount) {
+                setNeedsApproval(false);
+                return;
+            }
 
             try {
                 setCheckingApproval(true);
                 await refetchAllowance();
-                console.log('Allowance Refetched:', currentAllowance);
-
-                setNeedsApproval(currentAllowance !== undefined && currentAllowance < parseUnits(amount, 18));
-                console.log('Needs Approval:', needsApproval);
+                
+                // Only mark as needing approval if amount is greater than 0 and allowance is insufficient
+                const amountBigInt = parseUnits(amount || '0', 18);
+                const needsApproval = amountBigInt > 0n && (currentAllowance === undefined || currentAllowance < amountBigInt);
+                
+                console.log('Approval check:', {
+                    amount: amountBigInt.toString(),
+                    allowance: currentAllowance?.toString(),
+                    needsApproval
+                });
+                
+                setNeedsApproval(needsApproval);
             } catch (error) {
                 console.error('Error checking allowance:', error);
             } finally {
@@ -107,13 +118,20 @@ export default function SupplyPage() {
             toast.dismiss('tx-confirm');
             
             if (needsApproval) {
+                // After approval, stay on the page but update approval status
                 toast.success('Token approved successfully!');
                 refetchAllowance().then(() => {
                     setNeedsApproval(false);
+                    setTxHash(undefined);
                 });
             } else {
+                // After successful supply, show toast and redirect to pool details
                 toast.success(`Successfully supplied ${formatTokenAmount(supplyAmount)} ${pool?.loanTokenSymbol}!`);
-                router.push(`/pools/${poolAddress}`);
+                
+                // Redirect to pool details after a brief delay
+                setTimeout(() => {
+                    router.push(`/pools/${poolAddress}`);
+                }, 2000); // 2 second delay to show the success message
             }
         }
     }, [receipt, router, supplyAmount, pool?.loanTokenSymbol, poolAddress, needsApproval, refetchAllowance]);
@@ -136,8 +154,7 @@ export default function SupplyPage() {
                     console.log('Approval transaction hash:', hash);
                     setTxHash(hash); 
                     toast.dismiss('approve-confirm');
-                    toast.loading('Approval transaction submitted...', { id: 'approve-wait' });
-                    toast.dismiss('approve-wait');
+                    toast.loading('Approval transaction submitted...', { id: 'tx-confirm' });
                 },
                 onError: (error) => {
                     console.error('Approval Error:', error);

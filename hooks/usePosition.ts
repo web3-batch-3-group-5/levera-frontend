@@ -2,160 +2,284 @@
 
 import { useCallback, useState, useEffect } from 'react';
 import { useReadContract, useWriteContract } from 'wagmi';
-import { Address, formatUnits } from 'viem';
+import { Address, formatUnits, isAddress } from 'viem';
 import { positionABI } from '@/lib/abis/position';
+import { toast } from 'sonner';
 
-export function usePosition(positionAddress: Address) {
+export function usePosition(positionAddress: Address | string | undefined) {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { writeContract, isPending: isWritePending } = useWriteContract();
-
-    // Read position data
+    
+    // Improved address validation
+    const isValidAddress = positionAddress && 
+                          typeof positionAddress === 'string' && 
+                          isAddress(positionAddress) &&
+                          positionAddress !== '0x0000000000000000000000000000000000000000';
+    
+    // Convert to proper Address type if valid
+    const validatedAddress = isValidAddress ? positionAddress as Address : undefined;
+    
+    console.log(`[usePosition] Initializing with address: ${positionAddress}, valid: ${isValidAddress}`);
+    
+    // Individual read contract calls for each property
     const { 
         data: baseCollateral,
         isLoading: isLoadingBaseCollateral,
-        error: baseCollateralError
-     } = useReadContract({
-        address: positionAddress,
-        abi: positionABI,
+        error: baseCollateralError,
+        refetch: refetchBaseCollateral
+    } = useReadContract({
+        address: validatedAddress,
+        abi: positionABI, 
         functionName: 'baseCollateral',
+        query: {
+            enabled: !!validatedAddress,
+        }
     });
 
     const {
         data: effectiveCollateral,
-        isLoading: isLoadingEffectiveCollateral,
-        error: effectiveCollateralError
+        isLoading: isLoadingEffectiveCollateral, 
+        error: effectiveCollateralError,
+        refetch: refetchEffectiveCollateral
     } = useReadContract({
-        address: positionAddress,
+        address: validatedAddress,
         abi: positionABI,
         functionName: 'effectiveCollateral',
+        query: {
+            enabled: !!validatedAddress,
+        }
     });
 
-    const { 
+    const {
         data: borrowShares,
         isLoading: isLoadingBorrowShares,
-        error: borrowSharesError
+        error: borrowSharesError,
+        refetch: refetchBorrowShares
     } = useReadContract({
-        address: positionAddress,
+        address: validatedAddress,
         abi: positionABI,
         functionName: 'borrowShares',
+        query: {
+            enabled: !!validatedAddress,
+        }
     });
 
-    const { 
+    const {
         data: leverage,
         isLoading: isLoadingLeverage,
-        error: leverageError
+        error: leverageError,
+        refetch: refetchLeverage
     } = useReadContract({
-        address: positionAddress,
+        address: validatedAddress,
         abi: positionABI,
         functionName: 'leverage',
+        query: {
+            enabled: !!validatedAddress,
+        }
     });
 
     const {
         data: liquidationPrice,
-        isLoading: isLoadingLiqPrice,
-        error: liqPriceError
+        isLoading: isLoadingLiquidationPrice,
+        error: liquidationPriceError,
+        refetch: refetchLiquidationPrice
     } = useReadContract({
-        address: positionAddress,
+        address: validatedAddress,
         abi: positionABI,
         functionName: 'liquidationPrice',
+        query: {
+            enabled: !!validatedAddress,
+        }
     });
 
     const {
         data: health,
         isLoading: isLoadingHealth,
-        error: healthError
+        error: healthError,
+        refetch: refetchHealth
     } = useReadContract({
-        address: positionAddress,
+        address: validatedAddress,
         abi: positionABI,
         functionName: 'health',
+        query: {
+            enabled: !!validatedAddress,
+        }
     });
 
-    const { 
+    const {
         data: ltv,
         isLoading: isLoadingLtv,
-        error: ltvError
+        error: ltvError,
+        refetch: refetchLtv
     } = useReadContract({
-        address: positionAddress,
+        address: validatedAddress,
         abi: positionABI,
         functionName: 'ltv',
+        query: {
+            enabled: !!validatedAddress,
+        }
     });
 
     const {
         data: lastUpdated,
-        isLoading: isLoadingLastUpdated
+        isLoading: isLoadingLastUpdated,
+        refetch: refetchLastUpdated
     } = useReadContract({
-        address: positionAddress,
+        address: validatedAddress,
         abi: positionABI,
         functionName: 'lastUpdated',
+        query: {
+            enabled: !!validatedAddress,
+        }
     });
 
     const {
         data: lendingPoolAddress,
-        isLoading: isLoadingLendingPool
+        isLoading: isLoadingLendingPool,
+        refetch: refetchLendingPool
     } = useReadContract({
-        address: positionAddress,
+        address: validatedAddress,
         abi: positionABI,
         functionName: 'lendingPool',
+        query: {
+            enabled: !!validatedAddress,
+        }
     });
 
-    // Update loading state based on individual loading states
+    // For contract writes
+    const { writeContract, isPending: isWritePending } = useWriteContract();
+
+    // Track overall loading state
     useEffect(() => {
-        const isLoadingAny = isLoadingBaseCollateral || 
-                          isLoadingEffectiveCollateral || 
-                          isLoadingBorrowShares || 
-                          isLoadingLeverage || 
-                          isLoadingLiqPrice || 
-                          isLoadingHealth || 
-                          isLoadingLtv || 
-                          isLoadingLastUpdated || 
-                          isLoadingLendingPool;
+        if (!validatedAddress) {
+            setIsLoading(false);
+            setError("Invalid position address");
+            return;
+        }
+
+        const isLoadingAny = 
+            isLoadingBaseCollateral || 
+            isLoadingEffectiveCollateral || 
+            isLoadingBorrowShares || 
+            isLoadingLeverage || 
+            isLoadingLiquidationPrice || 
+            isLoadingHealth || 
+            isLoadingLtv || 
+            isLoadingLastUpdated ||
+            isLoadingLendingPool;
         
         setIsLoading(isLoadingAny);
     }, [
-        isLoadingBaseCollateral, 
-        isLoadingEffectiveCollateral, 
-        isLoadingBorrowShares, 
-        isLoadingLeverage, 
-        isLoadingLiqPrice, 
-        isLoadingHealth, 
-        isLoadingLtv, 
-        isLoadingLastUpdated, 
+        validatedAddress,
+        isLoadingBaseCollateral,
+        isLoadingEffectiveCollateral,
+        isLoadingBorrowShares,
+        isLoadingLeverage,
+        isLoadingLiquidationPrice,
+        isLoadingHealth,
+        isLoadingLtv,
+        isLoadingLastUpdated,
         isLoadingLendingPool
     ]);
 
-    // Handle errors
+    // Collect and process errors
     useEffect(() => {
+        if (!validatedAddress) return;
+
         const errors = [
             baseCollateralError,
             effectiveCollateralError,
             borrowSharesError,
             leverageError,
-            liqPriceError,
+            liquidationPriceError,
             healthError,
             ltvError
         ].filter(Boolean);
 
         if (errors.length > 0) {
-            setError((errors[0] as Error).message);
+            const errorMessage = errors[0]?.message || "Error fetching position data";
+            console.error("Position data error:", errorMessage);
+            setError(errorMessage);
         } else {
             setError(null);
         }
     }, [
+        validatedAddress,
         baseCollateralError,
         effectiveCollateralError,
         borrowSharesError,
         leverageError,
-        liqPriceError,
+        liquidationPriceError,
         healthError,
         ltvError
     ]);
 
+    // Log data for debugging
+    useEffect(() => {
+        if (!validatedAddress) return;
+
+        console.log("Position Contract Data:", {
+            address: validatedAddress,
+            baseCollateral,
+            effectiveCollateral,
+            borrowShares,
+            leverage,
+            liquidationPrice,
+            health,
+            ltv,
+            lastUpdated,
+            lendingPoolAddress
+        });
+    }, [
+        validatedAddress,
+        baseCollateral,
+        effectiveCollateral,
+        borrowShares,
+        leverage,
+        liquidationPrice,
+        health,
+        ltv,
+        lastUpdated,
+        lendingPoolAddress
+    ]);
+
+    // Refresh all data
+    const refresh = useCallback(async () => {
+        if (!validatedAddress) return;
+        
+        await Promise.all([
+            refetchBaseCollateral(),
+            refetchEffectiveCollateral(),
+            refetchBorrowShares(),
+            refetchLeverage(),
+            refetchLiquidationPrice(),
+            refetchHealth(),
+            refetchLtv(),
+            refetchLastUpdated(),
+            refetchLendingPool()
+        ]);
+        
+        console.log("Position data refreshed");
+    }, [
+        validatedAddress,
+        refetchBaseCollateral,
+        refetchEffectiveCollateral,
+        refetchBorrowShares,
+        refetchLeverage,
+        refetchLiquidationPrice,
+        refetchHealth,
+        refetchLtv,
+        refetchLastUpdated,
+        refetchLendingPool
+    ]);
+
     // Position actions
     const addCollateral = useCallback(async (amount: bigint) => {
+        if (!validatedAddress) throw new Error("Invalid position address");
+        
         try {
             return await writeContract({
-                address: positionAddress,
+                address: validatedAddress,
                 abi: positionABI,
                 functionName: 'addCollateral',
                 args: [amount],
@@ -164,57 +288,17 @@ export function usePosition(positionAddress: Address) {
             console.error('Error adding collateral:', err);
             throw err;
         }
-    }, [writeContract, positionAddress]);
-
-    const borrow = useCallback(async (amount: bigint) => {
-        try {
-            return await writeContract({
-                address: positionAddress,
-                abi: positionABI,
-                functionName: 'borrow',
-                args: [amount],
-            });
-        } catch (err) {
-            console.error('Error borrowing from position:', err);
-            throw err;
-        }
-    }, [writeContract, positionAddress]);
-
-    const closePosition = useCallback(async () => {
-        try {
-            return await writeContract({
-                address: positionAddress,
-                abi: positionABI,
-                functionName: 'closePosition',
-                args: [],
-            });
-        } catch (err) {
-            console.error('Error closing position:', err);
-            throw err;
-        }
-    }, [writeContract, positionAddress]);
-
-    const withdrawCollateral = useCallback(async (amount: bigint) => {
-        try {
-            return await writeContract({
-                address: positionAddress,
-                abi: positionABI,
-                functionName: 'withdrawCollateral',
-                args: [amount],
-            });
-        } catch (err) {
-            console.error('Error withdrawing collateral:', err);
-            throw err;
-        }
-    }, [writeContract, positionAddress]);
+    }, [writeContract, validatedAddress]);
 
     const updateLeverage = useCallback(async (newLeverage: number) => {
+        if (!validatedAddress) throw new Error("Invalid position address");
+        
         try {
             // Convert leverage to basis points (e.g., 1.5 -> 150)
             const leverageBps = BigInt(Math.floor(newLeverage * 100));
 
             return await writeContract({
-                address: positionAddress,
+                address: validatedAddress,
                 abi: positionABI,
                 functionName: 'updateLeverage',
                 args: [leverageBps],
@@ -223,16 +307,48 @@ export function usePosition(positionAddress: Address) {
             console.error('Error updating leverage:', err);
             throw err;
         }
-    }, [writeContract, positionAddress]);
+    }, [writeContract, validatedAddress]);
 
-    // Derived/formatted values
+    const closePosition = useCallback(async () => {
+        if (!validatedAddress) throw new Error("Invalid position address");
+        
+        try {
+            return await writeContract({
+                address: validatedAddress,
+                abi: positionABI,
+                functionName: 'closePosition',
+                args: [],
+            });
+        } catch (err) {
+            console.error('Error closing position:', err);
+            throw err;
+        }
+    }, [writeContract, validatedAddress]);
+
+    const withdrawCollateral = useCallback(async (amount: bigint) => {
+        if (!validatedAddress) throw new Error("Invalid position address");
+        
+        try {
+            return await writeContract({
+                address: validatedAddress,
+                abi: positionABI,
+                functionName: 'withdrawCollateral',
+                args: [amount],
+            });
+        } catch (err) {
+            console.error('Error withdrawing collateral:', err);
+            throw err;
+        }
+    }, [writeContract, validatedAddress]);
+
+    // Create formatted values for UI display
     const formattedValues = {
         baseCollateral: baseCollateral ? formatUnits(baseCollateral, 18) : '0',
         effectiveCollateral: effectiveCollateral ? formatUnits(effectiveCollateral, 18) : '0',
         borrowShares: borrowShares ? formatUnits(borrowShares, 18) : '0',
         leverage: leverage ? Number(leverage) / 100 : 1, // Convert from basis points to decimal
         liquidationPrice: liquidationPrice ? formatUnits(liquidationPrice, 18) : '0',
-        health: health ? Number(health) / 100 : 0, // Assuming health is in basis points
+        health: health ? (Number(health) / 100).toFixed(2) : '0.00', // Assuming health is in basis points
         ltv: ltv ? Number(ltv) / 10000 : 0, // Assuming LTV is in basis points
         lastUpdated: lastUpdated ? new Date(Number(lastUpdated) * 1000) : new Date(),
     };
@@ -254,14 +370,15 @@ export function usePosition(positionAddress: Address) {
 
         // Position actions
         addCollateral,
-        borrow,
         closePosition,
         withdrawCollateral,
         updateLeverage,
+        refresh,
 
-        // Loading states
+        // Status
         isLoading,
         isWritePending,
         error,
+        isValid: !!validatedAddress
     };
 }

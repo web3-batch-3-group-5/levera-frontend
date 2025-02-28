@@ -43,8 +43,11 @@ export const positionFactoryABI = [
       type: "function",
     },
     {
-      inputs: [{ internalType: "address", name: "user", type: "address" }],
-      name: "getUserPositions",
+      inputs: [
+        { internalType: "address", name: "user", type: "address" },
+        { internalType: "address", name: "_lendingPool", type: "address" },
+      ],
+      name: "getPoolPositions",
       outputs: [{ internalType: "address[]", name: "", type: "address[]" }],
       stateMutability: "view",
       type: "function",
@@ -62,11 +65,13 @@ export const positionFactoryABI = [
     {
       inputs: [
         { internalType: "address", name: "", type: "address" },
+        { internalType: "address", name: "", type: "address" },
         { internalType: "uint256", name: "", type: "uint256" },
       ],
-      name: "userPositions",
+      name: "userPoolPositions",
       outputs: [{ internalType: "address", name: "", type: "address" }],
       stateMutability: "view",
       type: "function",
     },
   ] as const;
+  

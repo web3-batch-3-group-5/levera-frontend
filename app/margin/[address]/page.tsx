@@ -7,11 +7,11 @@ import { Button } from '@/components/shared/Button';
 import { ArrowLeft, Info, ChevronRight, AlertTriangle, Plus, Scale, Activity, TrendingUp } from 'lucide-react';
 import { useLendingPool } from '@/hooks/useLendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
-import { usePositionFactory } from '@/hooks/usePositionFactory';
 import { formatTokenAmount } from '@/lib/utils/format';
 import { formatAddress } from '@/lib/utils';
 import { useAccount } from 'wagmi';
-import { MarginCard } from '@/components/margin/MarginCard';
+import { PositionDashboard } from '@/components/margin/PositionDashboard';
+import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 
 // Helper function to format percentage
 const formatPercentage = (value: number) => {
@@ -26,12 +26,13 @@ export default function MarginDetailsPage() {
     const router = useRouter();
     const poolAddress = params.address as Address;
     const { address: userAddress, isConnected } = useAccount();
+    
     // Client-side detection
     const [isClient, setIsClient] = useState(false);
 
-    // Fix for hydration mismatch - only set isClient to true after component mounts
     useEffect(() => {
         setIsClient(true);
+        console.log("Component mounted, setting isClient to true");
     }, []);
 
     // Get pool details
@@ -49,21 +50,6 @@ export default function MarginDetailsPage() {
         error: poolError
     } = useLendingPool(poolAddress);
 
-    // Get user positions for this specific pool
-    const { 
-        userPositions, 
-        isLoading: isLoadingPositions, 
-        error: positionsError,
-        getPositionsByPoolId
-    } = usePositionFactory();
-
-    // Filter positions for this specific pool
-    const poolPositions = userPositions.filter((position: any) => {
-        // Safely check for pool address match, handling different position structures
-        const positionLendingPoolAddress = position.lendingPool?.address || position.pool?.address;
-        return positionLendingPoolAddress?.toLowerCase() === poolAddress.toLowerCase();
-    });
-
     // Calculate utilization rate
     const utilizationRate = totalSupplyAssets && totalSupplyAssets > 0n
         ? (Number(totalBorrowAssets || 0n) / Number(totalSupplyAssets)) * 100
@@ -74,10 +60,9 @@ export default function MarginDetailsPage() {
     };
 
     // Loading state
-    const isLoading = isLoadingPool || isLoadingPositions;
-    const error = poolError || positionsError;
+    const isLoading = isLoadingPool;
+    const error = poolError;
 
-    // If pool not found
     if (!isLoading && !pool) {
         return (
             <div className="container mx-auto px-4 py-8">
@@ -144,7 +129,6 @@ export default function MarginDetailsPage() {
                         <p className="text-sm text-muted-foreground mt-1">Pool Address: {formatAddress(poolAddress)}</p>
                     </div>
                     <div>
-                        {/* Only render client-side content after mount to avoid hydration mismatch */}
                         {isClient && isConnected && (
                             <Button 
                                 onClick={handleOpenPosition}
@@ -157,62 +141,64 @@ export default function MarginDetailsPage() {
                     </div>
                 </div>
 
-                {/* Pool Statistics Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Position Type */}
-                    <div className="bg-card rounded-lg border p-6">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                            <TrendingUp className="size-4" />
-                            Position Type
-                        </div>
-                        {isLoading ? (
-                            <div className="h-7 bg-muted rounded w-24 animate-pulse"></div>
-                        ) : (
+                {/* Pool Stats */}
+                {isLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="bg-card rounded-lg border p-6 animate-pulse">
+                                <div className="flex items-center gap-2 mb-2">
+                                    <div className="w-4 h-4 bg-muted rounded"></div>
+                                    <div className="h-4 w-24 bg-muted rounded"></div>
+                                </div>
+                                <div className="h-8 bg-muted rounded w-24 mb-1"></div>
+                                <div className="h-4 bg-muted rounded w-48"></div>
+                            </div>
+                        ))}
+                    </div>
+                ) : pool && (
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="bg-card rounded-lg border p-6">
+                            <div className="flex items-center gap-2 mb-2">
+                                <TrendingUp className="size-4 text-primary" />
+                                <h3 className="text-sm font-medium">Position Type</h3>
+                            </div>
                             <p className="text-2xl font-bold">
-                                {pool?.positionType === 0 ? 'LONG' : 'SHORT'}
+                                {pool.positionType === 0 ? 'LONG' : 'SHORT'}
                             </p>
-                        )}
-                        <p className="text-sm text-muted-foreground mt-2">
-                            {pool?.positionType === 0 
-                                ? 'Profit when price increases' 
-                                : 'Profit when price decreases'}
-                        </p>
-                    </div>
-
-                    {/* Liquidation Threshold */}
-                    <div className="bg-card rounded-lg border p-6">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                            <Scale className="size-4" />
-                            Liquidation Threshold
+                            <p className="text-sm text-muted-foreground mt-1">
+                                {pool.positionType === 0 
+                                    ? `${pool.collateralTokenSymbol} → ${pool.loanTokenSymbol}` 
+                                    : `${pool.loanTokenSymbol} → ${pool.collateralTokenSymbol}`}
+                            </p>
                         </div>
-                        {isLoading ? (
-                            <div className="h-7 bg-muted rounded w-24 animate-pulse"></div>
-                        ) : (
+
+                        <div className="bg-card rounded-lg border p-6">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Scale className="size-4 text-primary" />
+                                <h3 className="text-sm font-medium">Liquidation Threshold</h3>
+                            </div>
                             <p className="text-2xl font-bold">
-                                {pool?.liquidationThresholdPercentage 
-                                    ? (Number(pool.liquidationThresholdPercentage)).toFixed(0) 
-                                    : '0'}%
+                                {pool.liquidationThresholdPercentage ? (Number(pool.liquidationThresholdPercentage)).toFixed(0) : '0'}%
                             </p>
-                        )}
-                        <p className="text-sm text-muted-foreground mt-2">
-                            Positions liquidated below this threshold
-                        </p>
-                    </div>
-
-                    {/* Max Leverage */}
-                    <div className="bg-card rounded-lg border p-6">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                            <Activity className="size-4" />
-                            Max Leverage
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Health factor below 1.0 triggers liquidation
+                            </p>
                         </div>
-                        <p className="text-2xl font-bold">
-                            3.00x
-                        </p>
-                        <p className="text-sm text-muted-foreground mt-2">
-                            Maximum allowed leverage for positions
-                        </p>
+
+                        <div className="bg-card rounded-lg border p-6">
+                            <div className="flex items-center gap-2 mb-2">
+                                <Activity className="size-4 text-primary" />
+                                <h3 className="text-sm font-medium">Interest Rate</h3>
+                            </div>
+                            <p className="text-2xl font-bold">
+                                {formatPercentage(Number(interestRate || 0n))}
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1">
+                                Annual interest rate for borrows
+                            </p>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* My Positions Section */}
                 <div className="bg-card rounded-lg border">
@@ -230,182 +216,138 @@ export default function MarginDetailsPage() {
                     </div>
 
                     <div className="p-6">
-                        {isLoading ? (
-                            <div className="space-y-4">
-                                {[...Array(2)].map((_, index) => (
-                                    <div key={index} className="border rounded-lg p-4 bg-card animate-pulse">
-                                        <div className="h-6 w-1/3 bg-muted rounded mb-4"></div>
-                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                                            <div className="space-y-2">
-                                                <div className="h-4 w-16 bg-muted rounded"></div>
-                                                <div className="h-5 w-20 bg-muted rounded"></div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <div className="h-4 w-16 bg-muted rounded"></div>
-                                                <div className="h-5 w-20 bg-muted rounded"></div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <div className="h-4 w-16 bg-muted rounded"></div>
-                                                <div className="h-5 w-20 bg-muted rounded"></div>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <div className="h-4 w-16 bg-muted rounded"></div>
-                                                <div className="h-5 w-20 bg-muted rounded"></div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        ) : !isClient ? (
-                            // Initial server-rendered state that matches any client-side state
-                            <div className="text-center py-8">
-                                <p className="text-muted-foreground mb-4">
-                                    Loading positions...
-                                </p>
-                            </div>
-                        ) : !isConnected ? (
-                            <div className="text-center py-8">
-                                <p className="text-muted-foreground mb-4">
-                                    Connect your wallet to view and manage your positions
-                                </p>
-                            </div>
-                        ) : poolPositions.length === 0 ? (
-                            <div className="text-center py-8">
-                                <p className="text-lg font-medium mb-2">No open positions</p>
-                                <p className="text-muted-foreground mb-6">
-                                    You don't have any open positions in this pool yet
-                                </p>
-                                <Button
-                                    onClick={handleOpenPosition}
-                                    className="gap-2"
-                                >
-                                    <Plus className="size-4" />
-                                    Open First Position
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="space-y-4">
-                                {poolPositions.map((position: any) => {
-                                    // Get pool details from position
-                                    const loanTokenSymbol = 
-                                        (position.lendingPool?.loanToken?.symbol) || 
-                                        (position.pool?.loanToken?.symbol) || 
-                                        pool?.loanTokenSymbol || 
-                                        'Unknown';
-                                    
-                                    const collateralTokenSymbol = 
-                                        (position.lendingPool?.collateralToken?.symbol) || 
-                                        (position.pool?.collateralToken?.symbol) || 
-                                        pool?.collateralTokenSymbol || 
-                                        'Unknown';
-                                    
-                                    return (
-                                        <MarginCard
-                                            key={position.id}
-                                            positionAddress={position.address as Address}
-                                            lendingPoolAddress={poolAddress}
-                                            loanTokenSymbol={loanTokenSymbol}
-                                            collateralTokenSymbol={collateralTokenSymbol}
-                                        />
-                                    );
-                                })}
-                            </div>
-                        )}
+                        {/* Use the improved PositionDashboard component */}
+                        <PositionDashboard 
+                            poolAddress={poolAddress}
+                            onCreatePosition={handleOpenPosition}
+                        />
                     </div>
                 </div>
 
-                {/* Pool Details */}
-                <div className="bg-card rounded-lg border">
-                    <div className="p-6 border-b">
-                        <h2 className="text-xl font-semibold">Pool Details</h2>
+                {/* Pool Information Card */}
+                {isLoading ? (
+                    <div className="bg-card rounded-lg border p-6 animate-pulse">
+                        <div className="h-6 bg-muted rounded w-40 mb-4"></div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {Array.from({ length: 6 }).map((_, i) => (
+                                <div key={i} className="space-y-2">
+                                    <div className="h-4 bg-muted rounded w-24"></div>
+                                    <div className="h-5 bg-muted rounded w-32"></div>
+                                </div>
+                            ))}
+                        </div>
+                        <div className="mt-6 bg-muted/50 p-4 rounded-lg border">
+                            <div className="flex items-start gap-2">
+                                <div className="h-4 w-4 bg-muted rounded mt-0.5"></div>
+                                <div className="space-y-2 w-full">
+                                    <div className="h-4 bg-muted rounded w-32"></div>
+                                    <div className="h-16 bg-muted rounded w-full"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div className="p-6">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                ) : pool && (
+                    <div className="bg-card rounded-lg border p-6">
+                        <h3 className="text-lg font-semibold mb-4">Pool Information</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                             <div>
                                 <p className="text-sm text-muted-foreground">Loan Token</p>
-                                {isLoading ? (
-                                    <div className="h-6 bg-muted rounded w-32 mt-1 animate-pulse"></div>
-                                ) : (
-                                    <p className="font-medium">{pool?.loanTokenSymbol} ({pool?.loanTokenName})</p>
-                                )}
+                                <p className="font-medium">{pool.loanTokenSymbol} ({pool.loanTokenName})</p>
                             </div>
                             
                             <div>
                                 <p className="text-sm text-muted-foreground">Collateral Token</p>
-                                {isLoading ? (
-                                    <div className="h-6 bg-muted rounded w-32 mt-1 animate-pulse"></div>
-                                ) : (
-                                    <p className="font-medium">{pool?.collateralTokenSymbol} ({pool?.collateralTokenName})</p>
-                                )}
-                            </div>
-                            
-                            <div>
-                                <p className="text-sm text-muted-foreground">Interest Rate</p>
-                                {isLoading ? (
-                                    <div className="h-6 bg-muted rounded w-16 mt-1 animate-pulse"></div>
-                                ) : (
-                                    <p className="font-medium">
-                                        {interestRate ? (Number(interestRate) / 100).toFixed(2) : '0.00'}%
-                                    </p>
-                                )}
-                            </div>
-                            
-                            <div>
-                                <p className="text-sm text-muted-foreground">Total Supply</p>
-                                {isLoading ? (
-                                    <div className="h-6 bg-muted rounded w-24 mt-1 animate-pulse"></div>
-                                ) : (
-                                    <p className="font-medium">
-                                        {formatTokenAmount(totalSupplyAssets)} {pool?.loanTokenSymbol}
-                                    </p>
-                                )}
-                            </div>
-                            
-                            <div>
-                                <p className="text-sm text-muted-foreground">Total Borrowed</p>
-                                {isLoading ? (
-                                    <div className="h-6 bg-muted rounded w-24 mt-1 animate-pulse"></div>
-                                ) : (
-                                    <p className="font-medium">
-                                        {formatTokenAmount(totalBorrowAssets)} {pool?.loanTokenSymbol}
-                                    </p>
-                                )}
+                                <p className="font-medium">{pool.collateralTokenSymbol} ({pool.collateralTokenName})</p>
                             </div>
                             
                             <div>
                                 <p className="text-sm text-muted-foreground">Utilization Rate</p>
-                                {isLoading ? (
-                                    <div className="h-6 bg-muted rounded w-16 mt-1 animate-pulse"></div>
-                                ) : (
-                                    <p className="font-medium">
-                                        {formatPercentage(utilizationRate)}
-                                    </p>
-                                )}
+                                <p className="font-medium">{formatPercentage(utilizationRate)}</p>
                             </div>
                             
                             <div>
-                                <p className="text-sm text-muted-foreground">Creator</p>
-                                {isLoading ? (
-                                    <div className="h-6 bg-muted rounded w-32 mt-1 animate-pulse"></div>
-                                ) : (
-                                    <p className="font-medium font-mono text-sm">
-                                        {formatAddress(pool?.creator || '0x0000000000000000000000000000000000000000' as Address)}
-                                    </p>
-                                )}
+                                <p className="text-sm text-muted-foreground">Total Supply</p>
+                                <p className="font-medium">{formatTokenAmount(totalSupplyAssets || 0n)} {pool.loanTokenSymbol}</p>
                             </div>
                             
                             <div>
-                                <p className="text-sm text-muted-foreground">Status</p>
-                                {isLoading ? (
-                                    <div className="h-6 bg-muted rounded w-16 mt-1 animate-pulse"></div>
-                                ) : (
-                                    <p className={`font-medium ${pool?.isActive ? 'text-green-500' : 'text-red-500'}`}>
-                                        {pool?.isActive ? 'Active' : 'Inactive'}
-                                    </p>
-                                )}
+                                <p className="text-sm text-muted-foreground">Total Borrowed</p>
+                                <p className="font-medium">{formatTokenAmount(totalBorrowAssets || 0n)} {pool.loanTokenSymbol}</p>
+                            </div>
+                            
+                            <div>
+                                <p className="text-sm text-muted-foreground">Created By</p>
+                                <p className="font-medium font-mono text-sm">{formatAddress(pool.creator)}</p>
                             </div>
                         </div>
+                        
+                        {/* Info box */}
+                        <div className="mt-6 bg-muted/50 p-4 rounded-lg border">
+                            <div className="flex items-start gap-2">
+                                <Info className="size-4 text-primary mt-0.5 flex-shrink-0" />
+                                <div>
+                                    <h4 className="text-sm font-medium">Pool Health</h4>
+                                    <p className="text-sm text-muted-foreground">
+                                        This pool has a {formatPercentage(Number(interestRate || 0n))} interest rate and 
+                                        a {pool.liquidationThresholdPercentage ? (Number(pool.liquidationThresholdPercentage)).toFixed(0) : '0'}% liquidation threshold. 
+                                        Positions are {pool.positionType === 0 ? 'LONG' : 'SHORT'}, meaning you'll profit when 
+                                        {pool.positionType === 0 
+                                            ? ` the price of ${pool.collateralTokenSymbol} increases relative to ${pool.loanTokenSymbol}.` 
+                                            : ` the price of ${pool.collateralTokenSymbol} decreases relative to ${pool.loanTokenSymbol}.`}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Leverage Explanation Card */}
+                <div className="bg-card rounded-lg border p-6">
+                    <h3 className="text-lg font-semibold mb-4">Understanding Leverage</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <h4 className="text-base font-medium mb-2">How Leverage Works</h4>
+                            <p className="text-sm text-muted-foreground mb-2">
+                                Leverage allows you to multiply your exposure to price movements by borrowing 
+                                assets from the lending pool. For example, with 2x leverage:
+                            </p>
+                            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 pl-2">
+                                <li>If the market moves 10% in your favor, your returns are ~20%</li>
+                                <li>If the market moves 10% against you, your losses are ~20%</li>
+                            </ul>
+                        </div>
+                        <div>
+                            <h4 className="text-base font-medium mb-2">Liquidation Risk</h4>
+                            <p className="text-sm text-muted-foreground mb-2">
+                                Higher leverage means higher risk of liquidation. Your position will be 
+                                liquidated if:
+                            </p>
+                            <ul className="list-disc list-inside text-sm text-muted-foreground space-y-1 pl-2">
+                                <li>Your health factor drops below 1.0</li>
+                                <li>The market price reaches your liquidation price</li>
+                                <li>Always monitor your positions and add collateral if needed</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <div className="flex items-start gap-2">
+                            <Info className="size-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                            <p className="text-sm text-blue-700 dark:text-blue-300">
+                                For this pool, the maximum leverage is 3x. Higher leverage means higher returns but also higher risk.
+                                Start with lower leverage if you're new to margin trading.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-center mt-6">
+                        <Button
+                            onClick={handleOpenPosition}
+                            className="gap-2"
+                        >
+                            <TrendingUp className="size-4" />
+                            Start Trading Now
+                        </Button>
                     </div>
                 </div>
             </div>

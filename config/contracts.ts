@@ -12,7 +12,7 @@ export const CONTRACTS = {
         abi: lendingPoolFactoryABI,
     },
     POSITION_FACTORY: {
-        address: "0xC233cF3B07E00cB62e3d0D5d02F581A78cb0dE70" as Address,
+        address: "0xc9175BD38e587aEe78C79c8203818Fea0C20fECF" as Address,
         abi: positionFactoryABI,
     },
     LENDING_POOL: {
