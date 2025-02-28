@@ -28,7 +28,6 @@ export default function SupplyPage() {
     const [supplyAmount, setSupplyAmount] = useState<bigint>(0n);
     const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
     const [needsApproval, setNeedsApproval] = useState(false);
-    const [checkingApproval, setCheckingApproval] = useState(false);
 
     // Get pool details
     const { poolAddresses, pools } = useLendingPoolFactory();
@@ -70,7 +69,6 @@ export default function SupplyPage() {
             }
 
             try {
-                setCheckingApproval(true);
                 await refetchAllowance();
                 
                 // Only mark as needing approval if amount is greater than 0 and allowance is insufficient
@@ -86,8 +84,6 @@ export default function SupplyPage() {
                 setNeedsApproval(needsApproval);
             } catch (error) {
                 console.error('Error checking allowance:', error);
-            } finally {
-                setCheckingApproval(false);
             }
         };
 

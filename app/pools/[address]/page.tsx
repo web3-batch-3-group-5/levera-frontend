@@ -29,7 +29,6 @@ const formatPercentage = (value: number) => {
 export default function PoolDetailsPage() {
     const params = useParams();
     const router = useRouter();
-    const { address } = useAccount();
     const poolAddress = params.address as Address;
 
     const { poolAddresses, pools } = useLendingPoolFactory();
@@ -40,7 +39,6 @@ export default function PoolDetailsPage() {
         totalSupplyAssets,
         totalSupplyShares,
         totalBorrowAssets,
-        totalBorrowShares,
         userSupplyShares,
         interestRate,
         isSupplyPending,

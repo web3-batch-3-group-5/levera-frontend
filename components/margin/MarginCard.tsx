@@ -3,7 +3,6 @@ import { Address } from 'viem';
 import { useRouter } from 'next/navigation';
 import { usePosition } from '@/hooks/usePosition';
 import { Button } from '@/components/shared/Button';
-import { formatTokenAmount } from '@/lib/utils/format';
 import { formatAddress } from '@/lib/utils';
 import { Activity, TrendingUp, AlertCircle, ArrowDownCircle, ArrowUpCircle, Info, Scale } from 'lucide-react';
 

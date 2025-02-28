@@ -12,7 +12,7 @@ import { useAccount } from 'wagmi';
 
 export default function PoolsPage() {
     const router = useRouter();
-    const { address, isConnected } = useAccount();
+    const { isConnected } = useAccount();
     const { poolAddresses, pools, isLoading, error, refresh } = useLendingPoolFactory();
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -46,10 +46,6 @@ export default function PoolsPage() {
 
     const handleSupply = (poolAddress: Address) => {
         router.push(`/pools/${poolAddress}/supply`);
-    };
-
-    const handleBorrow = (poolAddress: Address) => {
-        router.push(`/pools/${poolAddress}/borrow`);
     };
 
     const handleCreatePool = () => {

@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/shared/Button';
-import { ArrowLeft, Info, Percent, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Info, AlertTriangle } from 'lucide-react';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { Address, parseUnits } from 'viem';
 import { toast } from 'sonner';

@@ -4,7 +4,7 @@ import { Button } from '@/components/shared/Button';
 import { PoolDetails } from '@/config/contracts';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Scale, TrendingUp, ChevronDown, ChevronUp, Info, Database } from 'lucide-react';
+import { Scale, TrendingUp, Info, Database } from 'lucide-react';
 
 interface MarginPoolCardProps {
     poolAddress: Address;
