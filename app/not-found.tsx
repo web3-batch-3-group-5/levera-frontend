@@ -17,7 +17,7 @@ export default function NotFound() {
                     </div>
 
                     <p className="text-muted-foreground text-lg max-w-md mx-auto">
-                        Sorry, we couldn't find the page you're looking for. Please check the URL or go back to the homepage.
+                        Sorry, we couldn&apos;t find the page you&apos;re looking for. Please check the URL or go back to the homepage.
                     </p>
 
                     <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">

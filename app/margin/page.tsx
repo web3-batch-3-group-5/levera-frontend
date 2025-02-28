@@ -7,7 +7,6 @@ import { useState, useEffect } from 'react';
 import { Address } from 'viem';
 import { Button } from '@/components/shared/Button';
 import { Search, RefreshCw, Filter, ChevronDown, AlertTriangle, Plus } from 'lucide-react';
-import { formatTokenAmount } from '@/lib/utils/format';
 import { MarginCard } from '@/components/margin/MarginCard';
 import { MarginPoolCard } from '@/components/margin/MarginPoolCard';
 import { useAccount } from 'wagmi';
@@ -46,7 +45,7 @@ interface SafePosition {
 
 export default function MarginPoolsPage() {
     const router = useRouter();
-    const { address: userAddress, isConnected } = useAccount();
+    const { isConnected } = useAccount();
     const { poolAddresses, pools, isLoading: isLoadingPools, refresh: refreshPools, error: poolsError } = useLendingPoolFactory();
     const { userPositions, isLoading: isLoadingPositions, refresh: refreshPositions } = usePositionFactory();
 
@@ -66,10 +65,6 @@ export default function MarginPoolsPage() {
         setIsRefreshing(true);
         await Promise.all([refreshPools(), refreshPositions()]);
         setTimeout(() => setIsRefreshing(false), 500);
-    };
-
-    const handlePoolSelect = (poolAddress: Address) => {
-        router.push(`/margin/${poolAddress}`);
     };
 
     // Filter pools based on search term and position type

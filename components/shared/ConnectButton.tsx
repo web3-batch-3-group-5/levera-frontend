@@ -1,6 +1,7 @@
 'use client';
 
 import { FC } from 'react';
+import Image from 'next/image';
 import { ConnectButton as RainbowConnectButton } from '@rainbow-me/rainbowkit';
 import { Button } from '@/components/shared/Button';
 
@@ -63,7 +64,7 @@ export const ConnectButton: FC = () => {
                                         {chain.hasIcon && (
                                             <div className="size-5">
                                                 {chain.iconUrl && (
-                                                    <img
+                                                    <Image
                                                         alt={chain.name ?? 'Chain icon'}
                                                         src={chain.iconUrl}
                                                         className="size-full"

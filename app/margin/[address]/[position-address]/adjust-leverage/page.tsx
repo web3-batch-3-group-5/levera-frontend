@@ -3,9 +3,8 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Address } from 'viem';
-import { useAccount } from 'wagmi';
 import { Button } from '@/components/shared/Button';
-import { ArrowLeft, Info, AlertTriangle, ExternalLink } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, ExternalLink } from 'lucide-react';
 import { usePosition } from '@/hooks/usePosition';
 import { useLendingPool } from '@/hooks/useLendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
@@ -21,7 +20,6 @@ export default function AdjustLeveragePage() {
     const params = useParams();
     const poolAddress = params.address as Address;
     const positionAddress = params.positionAddress as Address;
-    const { address: userAddress } = useAccount();
 
     // State management
     const [newLeverage, setNewLeverage] = useState(150); // Basis points: 1.5x
@@ -40,8 +38,6 @@ export default function AdjustLeveragePage() {
         leverage,
         liquidationPrice,
         health,
-        ltv,
-        updateLeverage: updatePositionLeverage,
         isLoading: isLoadingPosition,
         error: positionError
     } = usePosition(positionAddress);
@@ -87,7 +83,6 @@ export default function AdjustLeveragePage() {
         try {
             // Current values
             const currentBaseCollateral = Number(baseCollateral);
-            const currentLeverage = Number(leverage) / 100;
             const currentBorrowAmount = Number(borrowShares);
             
             // New values

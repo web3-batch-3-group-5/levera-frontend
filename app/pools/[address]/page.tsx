@@ -8,7 +8,6 @@ import { ArrowLeft, Wallet, Percent, Database, BarChart3 } from 'lucide-react';
 import { Address, formatUnits } from 'viem';
 import { useRouter } from 'next/navigation';
 import { formatAddress } from '@/lib/utils';
-import { useAccount } from 'wagmi';
 
 // Helper function to format decimals consistently
 const formatTokenAmount = (amount: bigint | undefined, decimals: number = 18) => {

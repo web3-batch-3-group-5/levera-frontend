@@ -42,6 +42,7 @@ export async function getPrice(token: string): Promise<{ price: BigNumber; decim
     const price = new BigNumber(data[1].toString()).dividedBy(1e8);
     return { price, decimals: 8 };
   } catch (error) {
+    /* eslint-disable-next-line */
     throw new Error(`Failed to fetch price for ${token} due to ${(error as any)?.message}`);
   }
 }

@@ -4,14 +4,13 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Address } from 'viem';
 import { Button } from '@/components/shared/Button';
-import { ArrowLeft, Info, ChevronRight, AlertTriangle, Plus, Scale, Activity, TrendingUp } from 'lucide-react';
+import { ArrowLeft, Info, AlertTriangle, Plus, Scale, Activity, TrendingUp } from 'lucide-react';
 import { useLendingPool } from '@/hooks/useLendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
 import { formatTokenAmount } from '@/lib/utils/format';
 import { formatAddress } from '@/lib/utils';
 import { useAccount } from 'wagmi';
 import { PositionDashboard } from '@/components/margin/PositionDashboard';
-import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 
 // Helper function to format percentage
 const formatPercentage = (value: number) => {
@@ -25,7 +24,7 @@ export default function MarginDetailsPage() {
     const params = useParams();
     const router = useRouter();
     const poolAddress = params.address as Address;
-    const { address: userAddress, isConnected } = useAccount();
+    const { isConnected } = useAccount();
     
     // Client-side detection
     const [isClient, setIsClient] = useState(false);
@@ -45,7 +44,6 @@ export default function MarginDetailsPage() {
         totalSupplyAssets,
         totalBorrowAssets,
         interestRate,
-        ltp,
         isLoading: isLoadingPool,
         error: poolError
     } = useLendingPool(poolAddress);
@@ -79,7 +77,7 @@ export default function MarginDetailsPage() {
                     <AlertTriangle className="size-12 text-destructive mx-auto mb-4" />
                     <h2 className="text-xl font-bold mb-2">Pool Not Found</h2>
                     <p className="text-muted-foreground mb-6">
-                        The margin trading pool you're looking for doesn't exist or has been removed.
+                        The margin trading pool you&apos;re looking for doesn&apos;t exist or has been removed.
                     </p>
                     <Button onClick={() => router.push('/margin')}>
                         Return to Margin Trading
@@ -290,7 +288,7 @@ export default function MarginDetailsPage() {
                                     <p className="text-sm text-muted-foreground">
                                         This pool has a {formatPercentage(Number(interestRate || 0n))} interest rate and 
                                         a {pool.liquidationThresholdPercentage ? (Number(pool.liquidationThresholdPercentage)).toFixed(0) : '0'}% liquidation threshold. 
-                                        Positions are {pool.positionType === 0 ? 'LONG' : 'SHORT'}, meaning you'll profit when 
+                                        Positions are {pool.positionType === 0 ? 'LONG' : 'SHORT'}, meaning you&apos;ll profit when 
                                         {pool.positionType === 0 
                                             ? ` the price of ${pool.collateralTokenSymbol} increases relative to ${pool.loanTokenSymbol}.` 
                                             : ` the price of ${pool.collateralTokenSymbol} decreases relative to ${pool.loanTokenSymbol}.`}
@@ -335,7 +333,7 @@ export default function MarginDetailsPage() {
                             <Info className="size-4 text-blue-500 mt-0.5 flex-shrink-0" />
                             <p className="text-sm text-blue-700 dark:text-blue-300">
                                 For this pool, the maximum leverage is 3x. Higher leverage means higher returns but also higher risk.
-                                Start with lower leverage if you're new to margin trading.
+                                Start with lower leverage if you&apos;re new to margin trading.
                             </p>
                         </div>
                     </div>

@@ -3,13 +3,10 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Address } from 'viem';
-import { useAccount } from 'wagmi';
 import { Button } from '@/components/shared/Button';
 import { ArrowLeft, Info, AlertTriangle, ExternalLink, ArrowUpCircle } from 'lucide-react';
 import { usePosition } from '@/hooks/usePosition';
-import { useLendingPool } from '@/hooks/useLendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
-import { usePositionFactory } from '@/hooks/usePositionFactory';
 import { formatTokenAmount } from '@/lib/utils/format';
 import { useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { toast } from 'sonner';
@@ -21,7 +18,6 @@ export default function ClosePositionPage() {
     const params = useParams();
     const poolAddress = params.address as Address;
     const positionAddress = params.positionAddress as Address;
-    const { address: userAddress } = useAccount();
 
     // State management
     const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
@@ -38,19 +34,9 @@ export default function ClosePositionPage() {
         effectiveCollateral,
         borrowShares,
         leverage,
-        liquidationPrice,
-        health,
-        ltv,
-        closePosition: closePositionFunc,
         isLoading: isLoadingPosition,
         error: positionError
     } = usePosition(positionAddress);
-
-    // Get lending pool data
-    const { ltp } = useLendingPool(poolAddress);
-
-    // Get position factory for deleting position
-    const { deletePosition } = usePositionFactory();
 
     // Contract functions
     const { writeContract, isPending: isWritePending } = useWriteContract();
@@ -95,26 +81,6 @@ export default function ClosePositionPage() {
             });
         } catch (error) {
             console.error('Error closing position:', error);
-            toast.dismiss('close-position');
-            toast.error('Failed to close position');
-        }
-    };
-
-    // Alternative method to close via factory
-    const handleDeletePosition = async () => {
-        try {
-            toast.loading('Closing position...', { id: 'close-position' });
-
-            // Use factory delete method
-            const hash = await deletePosition(poolAddress, userAddress as Address);
-            
-            if (hash) {
-                setTxHash(hash as `0x${string}`);
-                toast.dismiss('close-position');
-                toast.loading('Transaction submitted, waiting for confirmation...', { id: 'tx-confirm' });
-            }
-        } catch (error) {
-            console.error('Error deleting position:', error);
             toast.dismiss('close-position');
             toast.error('Failed to close position');
         }
@@ -191,7 +157,7 @@ export default function ClosePositionPage() {
                         <ArrowUpCircle className="size-12 text-primary mx-auto mb-4" />
                         <h1 className="text-xl font-bold mb-2">Close Position</h1>
                         <p className="text-sm text-muted-foreground">
-                            You're about to close your {pool.loanTokenSymbol}/{pool.collateralTokenSymbol} position
+                            You&apos;re about to close your {pool.loanTokenSymbol}/{pool.collateralTokenSymbol} position
                         </p>
                     </div>
 

@@ -360,7 +360,7 @@ export default function CreatePoolPage() {
                                 <div>
                                     <p className="font-medium mb-1">Important Information</p>
                                     <p className="text-muted-foreground text-xs">
-                                        Make sure you've verified the token addresses and price feeds. Once created, pool parameters cannot be changed.
+                                        Make sure you&apos;ve verified the token addresses and price feeds. Once created, pool parameters cannot be changed.
                                     </p>
                                 </div>
                             </div>

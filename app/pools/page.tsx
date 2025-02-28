@@ -205,7 +205,7 @@ export default function PoolsPage() {
                             {searchTerm && filteredPools.length === 0 ? (
                                 <div className="text-center py-12 border rounded-lg bg-card">
                                     <p className="text-muted-foreground">
-                                        No pools match your search for "{searchTerm}"
+                                        No pools match your search for &quot;{searchTerm}&quot;
                                     </p>
                                     <Button
                                         variant="link"

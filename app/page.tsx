@@ -99,7 +99,7 @@ export default function HomePage() {
                                 <div className="bg-muted/30 p-6 rounded-lg border">
                                     <div className="bg-primary text-primary-foreground w-8 h-8 rounded-full flex items-center justify-center font-bold mb-4">1</div>
                                     <h3 className="text-lg font-semibold mb-2">Connect Wallet</h3>
-                                    <p className="text-muted-foreground">Connect your wallet to access Levera's permissionless margin trading platform.</p>
+                                    <p className="text-muted-foreground">Connect your wallet to access Levera&apos;s permissionless margin trading platform.</p>
                                 </div>
                                 <div className="bg-muted/30 p-6 rounded-lg border">
                                     <div className="bg-primary text-primary-foreground w-8 h-8 rounded-full flex items-center justify-center font-bold mb-4">2</div>

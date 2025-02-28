@@ -11,7 +11,7 @@ import {
 } from 'viem';
 import { useAccount } from 'wagmi';
 import { Button } from '@/components/shared/Button';
-import { ArrowLeft, Info, WalletIcon } from 'lucide-react';
+import { ArrowLeft, Info } from 'lucide-react';
 import { useLendingPool } from '@/hooks/useLendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
 import { formatTokenAmount } from '@/lib/utils/format';
@@ -40,11 +40,6 @@ export default function MarginTradePage() {
     const [approvalStep, setApprovalStep] = useState<
         'none' | 'wallet' | 'factory'
     >('none');
-    const [isClient, setIsClient] = useState(false);
-
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
 
     // Get pool data
     const { poolAddresses, pools } = useLendingPoolFactory();
@@ -307,35 +302,6 @@ export default function MarginTradePage() {
             console.error('Error creating position:', error);
             toast.dismiss('create-position');
             toast.error('Failed to create position');
-        }
-    };
-
-    // Get the appropriate button label
-    const getButtonLabel = () => {
-        if (isConfirming || isWritePending) {
-            if (needsApproval && approvalStep === 'wallet')
-                return 'Approving Wallet...';
-            if (needsApproval && approvalStep === 'factory')
-                return 'Approving Factory...';
-            return 'Creating Position...';
-        }
-
-        if (needsApproval) {
-            if (approvalStep === 'wallet') return 'Approve Wallet';
-            if (approvalStep === 'factory') return 'Approve Position Factory';
-        }
-
-        return 'Create Position';
-    };
-
-    // Handle button click based on current step
-    const handleButtonClick = () => {
-        if (needsApproval) {
-            if (approvalStep === 'wallet') {
-                handleApproveWallet();
-            }
-        } else {
-            handleOpenPosition();
         }
     };
 

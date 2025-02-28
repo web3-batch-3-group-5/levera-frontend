@@ -3,9 +3,8 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Address, isAddress } from 'viem';
-import { useAccount } from 'wagmi';
 import { Button } from '@/components/shared/Button';
-import { ArrowLeft, Info, TrendingUp, AlertTriangle, ArrowDownCircle, ArrowUpCircle, ExternalLink } from 'lucide-react';
+import { ArrowLeft, TrendingUp, AlertTriangle, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { usePosition } from '@/hooks/usePosition';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
 import { formatAddress } from '@/lib/utils';
@@ -13,7 +12,6 @@ import { formatAddress } from '@/lib/utils';
 export default function PositionDetailsPage() {
     const params = useParams();
     const router = useRouter();
-    const { address: userAddress } = useAccount();
     
     // Client-side detection
     const [isClient, setIsClient] = useState(false);
@@ -75,7 +73,6 @@ export default function PositionDetailsPage() {
         // Status
         isLoading,
         error,
-        isWritePending,
         refresh: refreshPosition,
         isValid: isValidPosition
     } = usePosition(positionAddress);

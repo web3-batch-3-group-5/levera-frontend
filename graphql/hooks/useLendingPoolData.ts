@@ -1,4 +1,4 @@
-import { useQuery } from 'urql';
+import { useQuery } from '@tanstack/react-query';
 import { GET_LENDING_POOL, GET_USER_POSITIONS, GET_POOL_POSITIONS } from '../queries/lendingPool';
 import { LendingPool, Position } from '../types/generated';
 import { handleSubgraphError } from '../client';

@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Address, parseUnits, formatUnits, zeroAddress, maxUint256 } from 'viem';
 import { useAccount } from 'wagmi';
 import { Button } from '@/components/shared/Button';
-import { ArrowLeft, Info, WalletIcon, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Info, AlertTriangle } from 'lucide-react';
 import { usePosition } from '@/hooks/usePosition';
 import { useLendingPool } from '@/hooks/useLendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
@@ -49,7 +49,6 @@ export default function AddCollateralPage() {
         leverage,
         liquidationPrice,
         health,
-        addCollateral: addCollateralMethod,
         isLoading: isLoadingPosition,
         error: positionError
     } = usePosition(positionAddress);
@@ -152,13 +151,11 @@ export default function AddCollateralPage() {
         try {
             // Current values
             const currentEffectiveCollateral = Number(formatUnits(effectiveCollateral, 18));
-            const currentBaseCollateral = Number(formatUnits(baseCollateral, 18));
             const currentBorrowAmount = Number(formatUnits(borrowShares, 18));
             const currentLeverage = Number(leverage) / 100;
             
             // New values
             const additionalCollateral = parseFloat(collateralAmount);
-            const newBaseCollateral = currentBaseCollateral + additionalCollateral;
             const newEffectiveCollateral = currentEffectiveCollateral + (additionalCollateral * currentLeverage);
             
             // Calculate updated metrics
@@ -465,7 +462,7 @@ export default function AddCollateralPage() {
                                 <Info className="size-4 text-blue-500 flex-shrink-0 mt-0.5" />
                                 <div>
                                     <p className="text-blue-700 dark:text-blue-300 text-sm">
-                                        Adding collateral improves your position's health factor and lowers the liquidation price, 
+                                        Adding collateral improves your position&apos;s health factor and lowers the liquidation price, 
                                         reducing the risk of liquidation during market volatility.
                                     </p>
                                 </div>
