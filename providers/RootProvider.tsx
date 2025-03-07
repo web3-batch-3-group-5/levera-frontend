@@ -21,7 +21,7 @@ export function RootProvider({ children }: { children: ReactNode }) {
     return (
         <WagmiProvider config={config}>
             <QueryClientProvider client={queryClient}>
-                <RainbowKitProvider>
+                <RainbowKitProvider modalSize='compact'>
                     <ThemeProvider defaultTheme="system" storageKey="levera-ui-theme">
                         {children}
                     </ThemeProvider>
