@@ -176,7 +176,7 @@ export default function CreatePoolPage() {
             <Button
                 variant="ghost"
                 className="mb-6"
-                onClick={() => router.back()}
+                onClick={() => router.push('/pools')}
                 disabled={isPending || isConfirming}
             >
                 <ArrowLeft className="size-4 mr-2" />

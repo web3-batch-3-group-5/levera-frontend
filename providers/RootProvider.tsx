@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RainbowKitProvider } from '@rainbow-me/rainbowkit'
 import { config } from '@/config/wagmi'
 import { ReactNode, useState } from 'react'
+import { ThemeProvider } from './ThemeProvider';
 
 export function RootProvider({ children }: { children: ReactNode }) {
     const [queryClient] = useState(() => new QueryClient({
@@ -21,7 +22,9 @@ export function RootProvider({ children }: { children: ReactNode }) {
         <WagmiProvider config={config}>
             <QueryClientProvider client={queryClient}>
                 <RainbowKitProvider>
-                    {children}
+                    <ThemeProvider defaultTheme="system" storageKey="levera-ui-theme">
+                        {children}
+                    </ThemeProvider>
                 </RainbowKitProvider>
             </QueryClientProvider>
         </WagmiProvider>

@@ -403,7 +403,7 @@ export default function MarginTradePage() {
                         </div>
                         <input
                             type='range'
-                            min='1.1'
+                            min='1.0'
                             max='3'
                             step='0.1'
                             value={leverage}

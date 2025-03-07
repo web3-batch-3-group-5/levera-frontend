@@ -92,7 +92,7 @@ export default function MarginDetailsPage() {
             <div className="flex justify-between items-center mb-6">
                 <Button
                     variant="ghost"
-                    onClick={() => router.back()}
+                    onClick={() => router.push('/margin')}
                     className="gap-2"
                 >
                     <ArrowLeft className="size-4" />
