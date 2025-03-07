@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ConnectButton } from '@/components/shared/ConnectButton';
+import { ThemeToggle } from '@/components/shared/ThemeToggle';
 import { cn } from '@/lib/utils';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
@@ -52,7 +53,8 @@ export function Header() {
                         ))}
                     </div>
 
-                    <div className="hidden md:block">
+                    <div className="hidden md:flex items-center gap-2">
+                        <ThemeToggle />
                         <ConnectButton />
                     </div>
 
@@ -81,7 +83,8 @@ export function Header() {
                                     {item.name}
                                 </Link>
                             ))}
-                            <div className="px-3 pt-4">
+                            <div className="flex items-center justify-between px-3 pt-4">
+                                <ThemeToggle />
                                 <ConnectButton />
                             </div>
                         </div>

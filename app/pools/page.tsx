@@ -48,10 +48,6 @@ export default function PoolsPage() {
         router.push(`/pools/${poolAddress}/supply`);
     };
 
-    const handleBorrow = (poolAddress: Address) => {
-        router.push(`/pools/${poolAddress}/borrow`);
-    };
-
     const handleCreatePool = () => {
         if (!isConnected) {
             return;
