@@ -7,18 +7,17 @@ import { useState, useEffect } from 'react';
 import { Address } from 'viem';
 import { Button } from '@/components/shared/Button';
 import { Search, RefreshCw, Filter, ChevronDown, AlertTriangle, Plus } from 'lucide-react';
-import { formatTokenAmount } from '@/lib/utils/format';
 import { MarginCard } from '@/components/margin/MarginCard';
 import { MarginPoolCard } from '@/components/margin/MarginPoolCard';
 import { useAccount } from 'wagmi';
 
-// Type definitions to handle potential missing properties
+// Improved type definitions to match position data coming from hooks
 interface SafePosition {
     id: string;
-    address?: Address;
-    // Add safe access to nested properties
-    pool?: {
-        id?: string;
+    address: Address;
+    lendingPoolAddress?: Address; // This is the key field that's being added by usePositionFactory
+    // The nested structures below may or may not be present
+    lendingPool?: {
         address?: Address;
         loanToken?: {
             symbol?: string;
@@ -29,9 +28,7 @@ interface SafePosition {
             decimals?: number;
         };
     };
-    // Alternative structure that might be in your data
-    lendingPool?: {
-        id?: string;
+    pool?: {
         address?: Address;
         loanToken?: {
             symbol?: string;
@@ -46,7 +43,7 @@ interface SafePosition {
 
 export default function MarginPoolsPage() {
     const router = useRouter();
-    const { address: userAddress, isConnected } = useAccount();
+    const { isConnected } = useAccount();
     const { poolAddresses, pools, isLoading: isLoadingPools, refresh: refreshPools, error: poolsError } = useLendingPoolFactory();
     const { userPositions, isLoading: isLoadingPositions, refresh: refreshPositions } = usePositionFactory();
 
@@ -62,14 +59,15 @@ export default function MarginPoolsPage() {
         setIsClient(true);
     }, []);
 
+    // Debug log to see what position data we're getting
+    useEffect(() => {
+        console.log("User positions loaded:", userPositions);
+    }, [userPositions]);
+
     const handleRefresh = async () => {
         setIsRefreshing(true);
         await Promise.all([refreshPools(), refreshPositions()]);
         setTimeout(() => setIsRefreshing(false), 500);
-    };
-
-    const handlePoolSelect = (poolAddress: Address) => {
-        router.push(`/margin/${poolAddress}`);
     };
 
     // Filter pools based on search term and position type
@@ -86,9 +84,28 @@ export default function MarginPoolsPage() {
         return matchesSearch && matchesType;
     });
 
-    // Helper function to safely access position loan and collateral token symbols
+    // Improved helper function to safely access position token symbols
     const getPositionTokens = (position: SafePosition) => {
-        // Try to get data from position.lendingPool first (as used in your code)
+        // Get poolAddress from lendingPoolAddress which is the one we added in usePositionFactory
+        const lendingPoolAddress = position.lendingPoolAddress;
+        
+        // Find matching pool in pools array
+        if (lendingPoolAddress) {
+            const poolIndex = poolAddresses.findIndex(addr => 
+                addr.toLowerCase() === lendingPoolAddress.toLowerCase()
+            );
+            
+            if (poolIndex !== -1 && poolIndex < pools.length) {
+                const poolInfo = pools[poolIndex];
+                return {
+                    loanTokenSymbol: poolInfo.loanTokenSymbol,
+                    collateralTokenSymbol: poolInfo.collateralTokenSymbol,
+                    lendingPoolAddress
+                };
+            }
+        }
+        
+        // Fallback 1: Try position.lendingPool
         if (position.lendingPool?.loanToken?.symbol && position.lendingPool?.collateralToken?.symbol) {
             return {
                 loanTokenSymbol: position.lendingPool.loanToken.symbol,
@@ -97,7 +114,7 @@ export default function MarginPoolsPage() {
             };
         }
         
-        // Fall back to position.pool if lendingPool is not available
+        // Fallback 2: Try position.pool
         if (position.pool?.loanToken?.symbol && position.pool?.collateralToken?.symbol) {
             return {
                 loanTokenSymbol: position.pool.loanToken.symbol,
@@ -106,7 +123,16 @@ export default function MarginPoolsPage() {
             };
         }
         
-        // If neither is available, return fallback values
+        // Last fallback - use lendingPoolAddress with placeholder symbols
+        if (lendingPoolAddress) {
+            return {
+                loanTokenSymbol: "Token",
+                collateralTokenSymbol: "Collateral",
+                lendingPoolAddress
+            };
+        }
+        
+        // If nothing else works, return default values
         return {
             loanTokenSymbol: "Unknown",
             collateralTokenSymbol: "Unknown",
@@ -114,7 +140,7 @@ export default function MarginPoolsPage() {
         };
     };
 
-    // Filter positions with safe access to properties
+    // Filter positions with improved token symbol handling
     const filteredPositions = userPositions.filter((position: SafePosition) => {
         if (!searchTerm) return true;
         
@@ -329,7 +355,7 @@ export default function MarginPoolsPage() {
                                         return (
                                             <MarginCard
                                                 key={position.id}
-                                                positionAddress={position.address as Address || '0x0000000000000000000000000000000000000000' as Address}
+                                                positionAddress={position.address}
                                                 lendingPoolAddress={lendingPoolAddress}
                                                 loanTokenSymbol={loanTokenSymbol}
                                                 collateralTokenSymbol={collateralTokenSymbol}

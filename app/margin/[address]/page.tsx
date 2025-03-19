@@ -11,7 +11,6 @@ import { formatTokenAmount } from '@/lib/utils/format';
 import { formatAddress } from '@/lib/utils';
 import { useAccount } from 'wagmi';
 import { PositionDashboard } from '@/components/margin/PositionDashboard';
-import { LoadingSkeleton } from '@/components/shared/LoadingSkeleton';
 
 // Helper function to format percentage
 const formatPercentage = (value: number) => {
@@ -25,7 +24,7 @@ export default function MarginDetailsPage() {
     const params = useParams();
     const router = useRouter();
     const poolAddress = params.address as Address;
-    const { address: userAddress, isConnected } = useAccount();
+    const { isConnected } = useAccount();
     
     // Client-side detection
     const [isClient, setIsClient] = useState(false);
@@ -45,7 +44,6 @@ export default function MarginDetailsPage() {
         totalSupplyAssets,
         totalBorrowAssets,
         interestRate,
-        ltp,
         isLoading: isLoadingPool,
         error: poolError
     } = useLendingPool(poolAddress);
@@ -127,17 +125,6 @@ export default function MarginDetailsPage() {
                             )}
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">Pool Address: {formatAddress(poolAddress)}</p>
-                    </div>
-                    <div>
-                        {isClient && isConnected && (
-                            <Button 
-                                onClick={handleOpenPosition}
-                                className="gap-2"
-                            >
-                                <Plus className="size-4" />
-                                Open Position
-                            </Button>
-                        )}
                     </div>
                 </div>
 

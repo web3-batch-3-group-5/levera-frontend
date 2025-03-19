@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 import { Address, parseUnits, formatUnits, zeroAddress, maxUint256 } from 'viem';
 import { useAccount } from 'wagmi';
 import { Button } from '@/components/shared/Button';
-import { ArrowLeft, Info, AlertTriangle, ArrowDownCircle } from 'lucide-react';
+import { ArrowLeft, Info, WalletIcon, AlertTriangle } from 'lucide-react';
 import { usePosition } from '@/hooks/usePosition';
 import { useLendingPool } from '@/hooks/useLendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
@@ -13,10 +13,9 @@ import { formatTokenAmount } from '@/lib/utils/format';
 import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { erc20Abi } from 'viem';
 import { toast } from 'sonner';
-import { formatAddress } from '@/lib/utils';
 import { positionABI } from '@/lib/abis/position';
 
-export default function AddCollateralPage() {
+export default function RepayPositionPage() {
     const router = useRouter();
     const params = useParams();
     const poolAddress = params.address as Address;
@@ -27,7 +26,7 @@ export default function AddCollateralPage() {
     const [isClient, setIsClient] = useState(false);
 
     // State management
-    const [collateralAmount, setCollateralAmount] = useState('');
+    const [repayAmount, setRepayAmount] = useState('');
     const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
     const [needsApproval, setNeedsApproval] = useState(true);
 
@@ -49,13 +48,13 @@ export default function AddCollateralPage() {
         leverage,
         liquidationPrice,
         health,
+        ltv,
         isLoading: isLoadingPosition,
-        error: positionError,
-        refresh: refreshPosition
+        error: positionError
     } = usePosition(positionAddress);
 
-    // Get lending pool data for calculations
-    const { ltp } = useLendingPool(poolAddress);
+    // Get lending pool data
+    const { totalBorrowShares, totalBorrowAssets } = useLendingPool(poolAddress);
 
     // Contract functions
     const { writeContract, isPending: isWritePending } = useWriteContract();
@@ -67,7 +66,7 @@ export default function AddCollateralPage() {
 
     // Get token balance
     const { data: walletBalance, refetch: refetchBalance } = useReadContract({
-        address: pool?.collateralToken,
+        address: pool?.loanToken,
         abi: erc20Abi,
         functionName: 'balanceOf',
         args: [userAddress || zeroAddress],
@@ -75,7 +74,7 @@ export default function AddCollateralPage() {
 
     // Get token allowance for position contract
     const { data: walletAllowance, refetch: refetchAllowance } = useReadContract({
-        address: pool?.collateralToken,
+        address: pool?.loanToken,
         abi: erc20Abi,
         functionName: 'allowance',
         args: [userAddress || zeroAddress, positionAddress],
@@ -91,17 +90,17 @@ export default function AddCollateralPage() {
 
     // Check if approval is needed
     useEffect(() => {
-        if (!isClient || !walletAllowance || !pool?.collateralToken || !collateralAmount) {
+        if (!isClient || !walletAllowance || !pool?.loanToken || !repayAmount) {
             return;
         }
         
         try {
-            if (collateralAmount === '') {
+            if (repayAmount === '') {
                 setNeedsApproval(false);
                 return;
             }
             
-            const amountBigInt = parseUnits(collateralAmount, 18);
+            const amountBigInt = parseUnits(repayAmount, 18);
             
             if (walletAllowance < amountBigInt) {
                 setNeedsApproval(true);
@@ -111,7 +110,7 @@ export default function AddCollateralPage() {
         } catch (error) {
             console.error('Error checking allowance:', error);
         }
-    }, [walletAllowance, pool?.collateralToken, collateralAmount, isClient]);
+    }, [walletAllowance, pool?.loanToken, repayAmount, isClient]);
 
     // Watch for transaction completion
     useEffect(() => {
@@ -127,67 +126,124 @@ export default function AddCollateralPage() {
                     setTxHash(undefined);
                 });
             } else {
-                toast.success('Collateral added successfully!');
-                refreshPosition();
-                // Redirect to position page
+                toast.success('Debt repaid successfully!');
                 setTimeout(() => {
                     router.push(`/margin/${poolAddress}/${positionAddress}`);
                 }, 1000);
             }
-        } else if (receipt.status === 'reverted') {
+        } else {
             toast.dismiss('tx-confirm');
-            toast.error('Transaction failed: The contract reverted the operation');
+            toast.error('Transaction failed');
         }
-    }, [
-        receipt,
-        router,
-        poolAddress,
-        positionAddress,
-        needsApproval,
-        refetchAllowance,
-        refreshPosition
-    ]);
+    }, [receipt, router, needsApproval, refetchAllowance, poolAddress, positionAddress]);
 
-    // Calculate how this affects health factor and liquidation price
+    // Convert borrowShares to actual borrowed amount
+    const calculateBorrowedAmount = () => {
+        if (!borrowShares || !totalBorrowShares || !totalBorrowAssets || totalBorrowShares === 0n) {
+            return 0n;
+        }
+
+        // Convert shares to assets: (shares * totalAssets) / totalShares
+        return (borrowShares * totalBorrowAssets) / totalBorrowShares;
+    };
+
+    // Get actual borrowed amount
+    const borrowedAmount = calculateBorrowedAmount();
+    const borrowedAmountFormatted = formatTokenAmount(borrowedAmount);
+
+    // Calculate how this affects health factor and LTV
     const calculateUpdatedMetrics = () => {
-        // Just return the current values
-        return {
-            newHealth: Number(health) / 100 || 0,
-            newLiquidationPrice: Number(liquidationPrice) || 0,
-            healthImprovement: 0,
-            liquidationPriceReduction: 0
-        };
+        if (!repayAmount || !health || !borrowedAmount || !effectiveCollateral || borrowedAmount === 0n) {
+            return {
+                newHealth: Number(health) / 100 || 0,
+                newLtv: Number(ltv) / 10000 || 0,
+                healthImprovement: 0,
+                ltvReduction: 0
+            };
+        }
+
+        try {
+            // Current values
+            const currentEffectiveCollateral = Number(formatUnits(effectiveCollateral, 18));
+            const currentBorrowAmount = Number(formatUnits(borrowedAmount, 18));
+            
+            // Repay amount in decimal
+            const repayAmountDecimal = Math.min(parseFloat(repayAmount), currentBorrowAmount);
+            
+            // New borrow amount after repayment
+            const newBorrowAmount = currentBorrowAmount - repayAmountDecimal;
+            
+            // Calculate new health and LTV
+            const currentHealth = Number(health) / 100;
+            const currentLtv = Number(ltv) / 10000;
+            
+            // Simple calculation (proportional)
+            const newHealth = newBorrowAmount === 0 
+                ? 999 // Practically infinite health if no debt
+                : currentHealth * (currentBorrowAmount / newBorrowAmount);
+                
+            const newLtv = newBorrowAmount === 0 
+                ? 0 // No LTV if no debt
+                : currentLtv * (newBorrowAmount / currentBorrowAmount);
+            
+            return {
+                newHealth: newHealth,
+                newLtv: newLtv,
+                healthImprovement: newHealth - currentHealth,
+                ltvReduction: currentLtv - newLtv
+            };
+        } catch (error) {
+            console.error('Error calculating updated metrics:', error);
+            return {
+                newHealth: Number(health) / 100 || 0,
+                newLtv: Number(ltv) / 10000 || 0,
+                healthImprovement: 0,
+                ltvReduction: 0
+            };
+        }
     };
 
     const updatedMetrics = calculateUpdatedMetrics();
 
     // Handle percentage buttons
     const handlePercentageClick = (percentage: number) => {
-        if (!walletBalance) return;
-        const amount = (Number(formatUnits(walletBalance, 18)) * percentage) / 100;
-        setCollateralAmount(amount.toString());
+        if (!borrowedAmount) return;
+        
+        // Calculate what percentage of the debt to repay
+        const amount = (Number(formatUnits(borrowedAmount, 18)) * percentage) / 100;
+        setRepayAmount(amount.toFixed(6)); // Limit to 6 decimal places for better UX
     };
 
     // Input validation
     const isExceedingBalance = () => {
-        if (!walletBalance || !collateralAmount) return false;
+        if (!walletBalance || !repayAmount) return false;
         try {
-            const amount = parseUnits(collateralAmount, 18);
+            const amount = parseUnits(repayAmount, 18);
             return amount > walletBalance;
         } catch {
             return false;
         }
     };
 
-    // Approve collateral tokens
+    const isExceedingDebt = () => {
+        if (!borrowedAmount || !repayAmount) return false;
+        try {
+            const amount = parseUnits(repayAmount, 18);
+            return amount > borrowedAmount;
+        } catch {
+            return false;
+        }
+    };
+
+    // Approve loan tokens
     const handleApproveTokens = async () => {
         if (!isClient || !pool || !userAddress) return;
 
         try {
-            toast.loading('Approving collateral token...', { id: 'approve-tx' });
+            toast.loading('Approving token...', { id: 'approve-tx' });
 
             writeContract({
-                address: pool.collateralToken,
+                address: pool.loanToken,
                 abi: erc20Abi,
                 functionName: 'approve',
                 args: [positionAddress, maxUint256],
@@ -211,45 +267,72 @@ export default function AddCollateralPage() {
         }
     };
 
-    // Add collateral
-    const handleAddCollateral = async () => {
-        if (!isClient || !collateralAmount || Number(collateralAmount) <= 0) return;
+    // Repay borrowed debt
+    const handleRepay = async () => {
+        if (!isClient || !repayAmount || Number(repayAmount) <= 0) return;
 
         try {
-            const collateralAmountBigInt = parseUnits(collateralAmount, 18);
+            // Convert repay amount to shares
+            if (!borrowShares || !totalBorrowShares || !totalBorrowAssets || totalBorrowAssets === 0n || borrowedAmount === 0n) {
+                toast.error('Cannot calculate repayment shares - invalid data');
+                return;
+            }
+
+            const repayAmountBigInt = parseUnits(repayAmount, 18);
             
-            toast.loading('Adding collateral...', { id: 'add-collateral' });
+            // If trying to repay more than the debt, just repay the whole debt
+            const actualRepayAmount = repayAmountBigInt > borrowedAmount ? borrowedAmount : repayAmountBigInt;
+            
+            // Calculate shares to repay: (amount * totalShares) / totalAssets
+            const sharesToRepay = (actualRepayAmount * totalBorrowShares) / totalBorrowAssets;
+            
+            toast.loading('Repaying debt...', { id: 'repay-debt' });
 
             writeContract({
                 address: positionAddress,
                 abi: positionABI,
-                functionName: 'addCollateral',
-                args: [collateralAmountBigInt],
+                functionName: 'repay',
+                args: [sharesToRepay],
             }, {
                 onSuccess: (hash) => {
-                    console.log('Add collateral transaction hash:', hash);
+                    console.log('Repay debt transaction hash:', hash);
                     setTxHash(hash);
-                    toast.dismiss('add-collateral');
+                    toast.dismiss('repay-debt');
                     toast.loading('Transaction submitted, waiting for confirmation...', { id: 'tx-confirm' });
                 },
                 onError: (error) => {
-                    console.error('Add collateral error:', error);
-                    toast.dismiss('add-collateral');
-                    toast.error('Failed to add collateral: ' + error.message);
+                    console.error('Repay debt error:', error);
+                    toast.dismiss('repay-debt');
+                    toast.error('Failed to repay debt: ' + error.message);
                 }
             });
         } catch (error) {
-            console.error('Error adding collateral:', error);
-            toast.dismiss('add-collateral');
-            toast.error('Failed to add collateral');
+            console.error('Error repaying debt:', error);
+            toast.dismiss('repay-debt');
+            toast.error('Failed to repay debt');
         }
     };
 
-    // Action button state
-    const isDisabled = isWritePending || isConfirming;
-    const buttonLabel = needsApproval 
-        ? (isDisabled ? 'Approving...' : `Approve ${pool?.collateralTokenSymbol}`) 
-        : (isDisabled ? 'Adding Collateral...' : 'Add Collateral');
+    // Get appropriate button state and label
+    const getButtonConfig = () => {
+        const isPending = isWritePending || isConfirming;
+        
+        if (needsApproval) {
+            return {
+                label: isPending ? 'Approving...' : `Approve ${pool?.loanTokenSymbol}`,
+                disabled: !repayAmount || isPending || isExceedingBalance() || Number(repayAmount) <= 0,
+                handler: handleApproveTokens
+            };
+        }
+        
+        return {
+            label: isPending ? 'Repaying Debt...' : 'Repay Debt',
+            disabled: !repayAmount || isPending || isExceedingBalance() || Number(repayAmount) <= 0,
+            handler: handleRepay
+        };
+    };
+
+    const buttonConfig = getButtonConfig();
 
     // Loading states
     if (!isClient || (isLoadingPosition && !positionError)) {
@@ -317,59 +400,44 @@ export default function AddCollateralPage() {
             <div className="max-w-xl mx-auto">
                 <div className="bg-card rounded-lg border p-6 space-y-6">
                     <div>
-                        <ArrowDownCircle className="size-10 text-primary mx-auto mb-4" />
-                        <h1 className="text-xl font-bold mb-2 text-center">Add Collateral</h1>
-                        <p className="text-sm text-muted-foreground text-center">
-                            Add collateral to your {pool?.loanTokenSymbol}/{pool?.collateralTokenSymbol} position
+                        <h1 className="text-xl font-bold mb-2">Repay Debt</h1>
+                        <p className="text-sm text-muted-foreground">
+                            Repay borrowed {pool?.loanTokenSymbol} for your {pool?.loanTokenSymbol}/{pool?.collateralTokenSymbol} position
                         </p>
                     </div>
 
                     {/* Current Position Summary */}
                     <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                         <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Position</span>
-                            <span className="font-mono text-sm">{formatAddress(positionAddress)}</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Current Base Collateral</span>
-                            <span>{(Number(formatUnits(baseCollateral || 0n, 18))).toLocaleString(undefined, { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 4 
-                            })} {pool?.collateralTokenSymbol}</span>
+                            <span className="text-sm text-muted-foreground">Current Borrowed Amount</span>
+                            <span>{borrowedAmountFormatted} {pool?.loanTokenSymbol}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-sm text-muted-foreground">Current Health Factor</span>
-                            <span className={`${Number(health) / 100 < 1.1 ? 'text-red-500 dark:text-red-400' : Number(health) / 100 < 1.3 ? 'text-yellow-500 dark:text-yellow-400' : 'text-green-500 dark:text-green-400'}`}>
+                            <span className={`${Number(health) / 100 < 1.1 ? 'text-red-500' : Number(health) / 100 < 1.3 ? 'text-yellow-500' : 'text-green-500'}`}>
                                 {(Number(health) / 100).toFixed(2)}
                             </span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Current Liquidation Price</span>
-                            <span>${(Number(formatUnits(liquidationPrice || 0n, 18))).toLocaleString(undefined, { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 2 
-                            })}</span>
-
+                            <span className="text-sm text-muted-foreground">Current LTV</span>
+                            <span>{(Number(ltv) / 10000).toFixed(4)}</span>
                         </div>
                     </div>
 
-                    {/* Collateral Input */}
+                    {/* Repay Input */}
                     <div className="space-y-4">
                         <div className="flex justify-between items-center">
-                            <h2 className="text-lg font-medium">Collateral Amount</h2>
+                            <h2 className="text-lg font-medium">Repay Amount</h2>
                             <div className="text-sm text-muted-foreground">
-                            Balance: {(Number(formatUnits(walletBalance || 0n, 18))).toLocaleString(undefined, { 
-                                minimumFractionDigits: 2, 
-                                maximumFractionDigits: 4 
-                            })} {pool?.collateralTokenSymbol}
+                                Balance: {formatTokenAmount(walletBalance || 0n)} {pool?.loanTokenSymbol}
                             </div>
                         </div>
 
                         <div className="relative">
                             <input
                                 type="number"
-                                value={collateralAmount}
-                                onChange={(e) => setCollateralAmount(e.target.value)}
+                                value={repayAmount}
+                                onChange={(e) => setRepayAmount(e.target.value)}
                                 className="w-full bg-background p-3 rounded border"
                                 placeholder="0.00"
                                 disabled={isWritePending || isConfirming}
@@ -377,14 +445,21 @@ export default function AddCollateralPage() {
                                 min="0"
                             />
                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                                <span className="text-sm font-medium">{pool?.collateralTokenSymbol}</span>
+                                <span className="text-sm font-medium">{pool?.loanTokenSymbol}</span>
                             </div>
                         </div>
 
                         {isExceedingBalance() && (
-                            <p className="text-sm text-red-500 dark:text-red-400 flex items-center gap-1">
+                            <p className="text-sm text-red-500 flex items-center gap-1">
                                 <Info className="size-4" />
                                 Insufficient balance
+                            </p>
+                        )}
+
+                        {isExceedingDebt() && (
+                            <p className="text-sm text-yellow-500 flex items-center gap-1">
+                                <Info className="size-4" />
+                                Amount exceeds current debt (will repay full amount)
                             </p>
                         )}
 
@@ -395,7 +470,7 @@ export default function AddCollateralPage() {
                                     variant="outline"
                                     onClick={() => handlePercentageClick(percentage)}
                                     className="flex-1"
-                                    disabled={isWritePending || isConfirming || !isClient || !walletBalance || walletBalance === 0n}
+                                    disabled={isWritePending || isConfirming || !isClient || !borrowedAmount || borrowedAmount === 0n}
                                 >
                                     {percentage}%
                                 </Button>
@@ -403,41 +478,63 @@ export default function AddCollateralPage() {
                         </div>
                     </div>
 
-                    {/* Updated Position Stats (showing same values as current) */}
-                    {isClient && collateralAmount && Number(collateralAmount) > 0 && (
+                    {/* Updated Position Summary */}
+                    {isClient && repayAmount && Number(repayAmount) > 0 && (
                         <div className="bg-muted/50 rounded-lg p-4 space-y-3">
                             <div className="flex justify-between">
-                                <span className="text-sm text-muted-foreground">New Base Collateral</span>
-                                <span>{(parseFloat(formatUnits(baseCollateral || 0n, 18)) + parseFloat(collateralAmount)).toLocaleString(undefined, { 
-                                    minimumFractionDigits: 2, 
-                                    maximumFractionDigits: 4 
-                                })} {pool?.collateralTokenSymbol}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm text-muted-foreground">Health Factor</span>
-                                <span className={`${Number(health) / 100 < 1.1 ? 'text-red-500 dark:text-red-400' : Number(health) / 100 < 1.3 ? 'text-yellow-500 dark:text-yellow-400' : 'text-green-500 dark:text-green-400'}`}>
-                                    {(Number(health) / 100).toFixed(2)}
+                                <span className="text-sm text-muted-foreground">Remaining Debt</span>
+                                <span>
+                                    {parseFloat(repayAmount) >= Number(formatUnits(borrowedAmount || 0n, 18))
+                                        ? '0.00'
+                                        : (Number(formatUnits(borrowedAmount || 0n, 18)) - parseFloat(repayAmount)).toFixed(4)
+                                    } {pool?.loanTokenSymbol}
                                 </span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-sm text-muted-foreground">Liquidation Price</span>
-                                <span>${(Number(formatUnits(liquidationPrice || 0n, 18))).toLocaleString(undefined, { 
-                                    minimumFractionDigits: 2, 
-                                    maximumFractionDigits: 2 
-                                })}</span>
+                                <span className="text-sm text-muted-foreground">New Health Factor</span>
+                                <span className={`${updatedMetrics.newHealth < 1.1 ? 'text-red-500' : updatedMetrics.newHealth < 1.3 ? 'text-yellow-500' : 'text-green-500'}`}>
+                                    {updatedMetrics.newHealth > 900 ? '∞' : updatedMetrics.newHealth.toFixed(2)} 
+                                    {updatedMetrics.healthImprovement > 0 && (
+                                        <span className="text-green-500 ml-1">(+{updatedMetrics.healthImprovement.toFixed(2)})</span>
+                                    )}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm text-muted-foreground">New LTV</span>
+                                <span>
+                                    {updatedMetrics.newLtv.toFixed(4)} 
+                                    {updatedMetrics.ltvReduction > 0 && (
+                                        <span className="text-green-500 ml-1">(-{updatedMetrics.ltvReduction.toFixed(4)})</span>
+                                    )}
+                                </span>
                             </div>
                         </div>
                     )}
 
+                    {/* Info message */}
+                    <div className="bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                        <div className="flex items-start gap-2">
+                            <Info className="size-4 text-blue-500 flex-shrink-0 mt-0.5" />
+                            <div>
+                                <p className="text-blue-700 dark:text-blue-300 text-sm">
+                                    Repaying your borrowed amount will improve your position&apos;s health factor and reduce liquidation risk.
+                                    You can repay any amount of your debt at any time.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Action Button */}
-                    <Button
-                        className="w-full"
-                        size="lg"
-                        onClick={needsApproval ? handleApproveTokens : handleAddCollateral}
-                        disabled={!collateralAmount || isDisabled || isExceedingBalance() || Number(collateralAmount) <= 0}
-                    >
-                        {buttonLabel}
-                    </Button>
+                    {isClient && (
+                        <Button
+                            className="w-full"
+                            size="lg"
+                            onClick={buttonConfig.handler}
+                            disabled={buttonConfig.disabled}
+                        >
+                            {buttonConfig.label}
+                        </Button>
+                    )}
 
                     {/* Transaction status */}
                     {isClient && txHash && (

@@ -19,7 +19,7 @@ const priceConverter: { [key: string]: number } = {
 
 const publicClient = createPublicClient({
   chain: sepolia,
-  transport: http(process.env.VITE_ALCHEMY_RPC_URL),
+  transport: http(process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL),
 });
 
 export function convertPrice(tokenSymbolIn: string, tokenSymbolOut: string, amount: number): number {

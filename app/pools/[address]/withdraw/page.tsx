@@ -160,7 +160,7 @@ export default function WithdrawPage() {
             <div className="container mx-auto px-4 py-8">
                 <div className="text-center">
                     <h1 className="text-2xl font-bold mb-4">Pool not found</h1>
-                    <Button onClick={() => router.back()}>
+                    <Button onClick={() => router.push(`/pools`)}>
                         <ArrowLeft className="size-4 mr-2" />
                         Go Back
                     </Button>

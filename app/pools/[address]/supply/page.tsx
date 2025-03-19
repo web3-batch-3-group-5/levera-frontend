@@ -28,7 +28,6 @@ export default function SupplyPage() {
     const [supplyAmount, setSupplyAmount] = useState<bigint>(0n);
     const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
     const [needsApproval, setNeedsApproval] = useState(false);
-    const [checkingApproval, setCheckingApproval] = useState(false);
 
     // Get pool details
     const { poolAddresses, pools } = useLendingPoolFactory();
@@ -70,7 +69,6 @@ export default function SupplyPage() {
             }
 
             try {
-                setCheckingApproval(true);
                 await refetchAllowance();
                 
                 // Only mark as needing approval if amount is greater than 0 and allowance is insufficient
@@ -86,8 +84,6 @@ export default function SupplyPage() {
                 setNeedsApproval(needsApproval);
             } catch (error) {
                 console.error('Error checking allowance:', error);
-            } finally {
-                setCheckingApproval(false);
             }
         };
 
@@ -233,7 +229,7 @@ export default function SupplyPage() {
             <div className="container mx-auto px-4 py-8">
                 <div className="text-center">
                     <h1 className="text-2xl font-bold mb-4">Pool not found</h1>
-                    <Button onClick={() => router.back()}>
+                    <Button onClick={() => router.push(`/pools`)}>
                         <ArrowLeft className="size-4 mr-2" />
                         Go Back
                     </Button>

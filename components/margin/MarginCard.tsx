@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Address } from 'viem';
+import { Address, formatUnits } from 'viem';
 import { useRouter } from 'next/navigation';
 import { usePosition } from '@/hooks/usePosition';
 import { Button } from '@/components/shared/Button';
-import { formatTokenAmount } from '@/lib/utils/format';
 import { formatAddress } from '@/lib/utils';
-import { Activity, TrendingUp, AlertCircle, ArrowDownCircle, ArrowUpCircle, Info, Scale } from 'lucide-react';
+import { Activity, TrendingUp, AlertCircle, ArrowDownCircle, ArrowUpCircle, Info, Scale, Wallet } from 'lucide-react';
 
 interface MarginCardProps {
     positionAddress: Address;
@@ -115,6 +114,11 @@ export function MarginCard({
     const handleAdjustLeverage = (e: React.MouseEvent) => {
         e.stopPropagation();
         router.push(`/margin/${lendingPoolAddress}/${positionAddress}/adjust-leverage`);
+    };
+
+    const handleRepay = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        router.push(`/margin/${lendingPoolAddress}/${positionAddress}/repay`);
     };
 
     const handleClosePosition = (e: React.MouseEvent) => {
@@ -247,7 +251,10 @@ export function MarginCard({
                         Liquidation Price
                     </p>
                     <p className="font-medium">
-                        ${formattedValues.liquidationPrice}
+                        ${(Number(formatUnits(liquidationPrice || 0n, 18))).toLocaleString(undefined, { 
+                            minimumFractionDigits: 2, 
+                            maximumFractionDigits: 2 
+                        })}
                     </p>
                 </div>
 
@@ -307,9 +314,8 @@ export function MarginCard({
                 </div>
             </div>
 
-            <div className="flex gap-2 mt-4">
+            <div className="grid grid-cols-2 gap-2 mt-4">
                 <Button
-                    className="flex-1"
                     variant="outline"
                     size="sm"
                     onClick={handleAddCollateral}
@@ -318,7 +324,6 @@ export function MarginCard({
                     Add Collateral
                 </Button>
                 <Button
-                    className="flex-1"
                     variant="outline"
                     size="sm"
                     onClick={handleAdjustLeverage}
@@ -327,7 +332,14 @@ export function MarginCard({
                     Adjust Leverage
                 </Button>
                 <Button
-                    className="flex-1"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleRepay}
+                >
+                    <Wallet className="size-4 mr-1" />
+                    Repay
+                </Button>
+                <Button
                     variant="secondary"
                     size="sm"
                     onClick={handleClosePosition}
@@ -349,6 +361,14 @@ export function MarginCard({
             >
                 <ArrowDownCircle className="size-3.5 mr-1" />
                 Add
+            </Button>
+            <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRepay}
+            >
+                <Wallet className="size-3.5 mr-1" />
+                Repay
             </Button>
             <Button
                 variant="secondary"

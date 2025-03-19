@@ -2,10 +2,9 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { Address, isAddress } from 'viem';
-import { useAccount } from 'wagmi';
+import { Address, isAddress, formatUnits } from 'viem';
 import { Button } from '@/components/shared/Button';
-import { ArrowLeft, Info, TrendingUp, AlertTriangle, ArrowDownCircle, ArrowUpCircle, ExternalLink } from 'lucide-react';
+import { ArrowLeft, TrendingUp, AlertTriangle, ArrowDownCircle, ArrowUpCircle, Info, Scale, Wallet } from 'lucide-react';
 import { usePosition } from '@/hooks/usePosition';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
 import { formatAddress } from '@/lib/utils';
@@ -13,7 +12,6 @@ import { formatAddress } from '@/lib/utils';
 export default function PositionDetailsPage() {
     const params = useParams();
     const router = useRouter();
-    const { address: userAddress } = useAccount();
     
     // Client-side detection
     const [isClient, setIsClient] = useState(false);
@@ -75,7 +73,6 @@ export default function PositionDetailsPage() {
         // Status
         isLoading,
         error,
-        isWritePending,
         refresh: refreshPosition,
         isValid: isValidPosition
     } = usePosition(positionAddress);
@@ -122,6 +119,11 @@ export default function PositionDetailsPage() {
     const handleAdjustLeverage = () => {
         if (!positionAddress) return;
         router.push(`/margin/${poolAddress}/${positionAddress}/adjust-leverage`);
+    };
+
+    const handleRepay = () => {
+        if (!positionAddress) return;
+        router.push(`/margin/${poolAddress}/${positionAddress}/repay`);
     };
 
     const handleClosePosition = () => {
@@ -257,53 +259,38 @@ export default function PositionDetailsPage() {
                             Position ID: {formatAddress(positionAddress)}
                         </p>
                     </div>
-
-                    <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1"
-                            onClick={handleAddCollateral}
-                        >
-                            <ArrowDownCircle className="size-3.5" />
-                            Add Collateral
-                        </Button>
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-1"
-                            onClick={handleAdjustLeverage}
-                        >
-                            <TrendingUp className="size-3.5" />
-                            Adjust Leverage
-                        </Button>
-                        <Button
-                            variant="secondary"
-                            size="sm"
-                            className="gap-1"
-                            onClick={handleClosePosition}
-                        >
-                            <ArrowUpCircle className="size-3.5" />
-                            Close Position
-                        </Button>
-                    </div>
                 </div>
 
                 {/* Position Stats */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
                     <div className="bg-muted/50 p-4 rounded-lg border">
                         <p className="text-sm text-muted-foreground mb-1">Base Collateral</p>
-                        <p className="text-xl font-semibold">{formattedValues.baseCollateral} {pool?.collateralTokenSymbol}</p>
+                        <p className="text-xl font-semibold">
+                            {(Number(formatUnits(baseCollateral || 0n, 18))).toLocaleString(undefined, { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 4 
+                            })} {pool?.collateralTokenSymbol}
+                        </p>
                     </div>
                     
                     <div className="bg-muted/50 p-4 rounded-lg border">
                         <p className="text-sm text-muted-foreground mb-1">Effective Collateral</p>
-                        <p className="text-xl font-semibold">{formattedValues.effectiveCollateral} {pool?.collateralTokenSymbol}</p>
+                        <p className="text-xl font-semibold">
+                            {(Number(formatUnits(effectiveCollateral || 0n, 18))).toLocaleString(undefined, { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 4 
+                            })} {pool?.collateralTokenSymbol}
+                        </p>
                     </div>
                     
                     <div className="bg-muted/50 p-4 rounded-lg border">
                         <p className="text-sm text-muted-foreground mb-1">Borrowed Amount</p>
-                        <p className="text-xl font-semibold">{formattedValues.borrowShares} {pool?.loanTokenSymbol}</p>
+                        <p className="text-xl font-semibold">
+                            {(Number(formatUnits(borrowShares || 0n, 18))).toLocaleString(undefined, { 
+                                minimumFractionDigits: 2, 
+                                maximumFractionDigits: 2 
+                            })} {pool?.loanTokenSymbol}
+                        </p>
                     </div>
                 </div>
 
@@ -311,12 +298,12 @@ export default function PositionDetailsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="p-4 bg-muted/30 rounded-lg border">
                         <p className="text-sm text-muted-foreground mb-1">Leverage</p>
-                        <p className="text-lg font-semibold">{formattedValues.leverage}x</p>
+                        <p className="text-lg font-semibold">{formattedValues.leverage.toFixed(2)}x</p>
                     </div>
                     
                     <div className="p-4 bg-muted/30 rounded-lg border">
                         <p className="text-sm text-muted-foreground mb-1">Liquidation Price</p>
-                        <p className="text-lg font-semibold">${formattedValues.liquidationPrice}</p>
+                        <p className="text-lg font-semibold">${Number(formattedValues.liquidationPrice).toFixed(2)}</p>
                     </div>
                     
                     <div className="p-4 bg-muted/30 rounded-lg border">
@@ -353,7 +340,7 @@ export default function PositionDetailsPage() {
                 )}
 
                 {/* Action Buttons */}
-                <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="mt-6 grid grid-cols-1 md:grid-cols-4 gap-4">
                     <Button
                         variant="outline"
                         className="gap-2"
@@ -370,6 +357,15 @@ export default function PositionDetailsPage() {
                     >
                         <TrendingUp className="size-4" />
                         Adjust Leverage
+                    </Button>
+                    
+                    <Button
+                        variant="outline"
+                        className="gap-2"
+                        onClick={handleRepay}
+                    >
+                        <Wallet className="size-4" />
+                        Repay Debt
                     </Button>
                     
                     <Button

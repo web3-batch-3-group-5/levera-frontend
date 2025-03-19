@@ -11,7 +11,7 @@ import {
 } from 'viem';
 import { useAccount } from 'wagmi';
 import { Button } from '@/components/shared/Button';
-import { ArrowLeft, Info, WalletIcon } from 'lucide-react';
+import { ArrowLeft, Info } from 'lucide-react';
 import { useLendingPool } from '@/hooks/useLendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
 import { formatTokenAmount } from '@/lib/utils/format';
@@ -40,11 +40,6 @@ export default function MarginTradePage() {
     const [approvalStep, setApprovalStep] = useState<
         'none' | 'wallet' | 'factory'
     >('none');
-    const [isClient, setIsClient] = useState(false);
-
-    useEffect(() => {
-        setIsClient(true);
-    }, []);
 
     // Get pool data
     const { poolAddresses, pools } = useLendingPoolFactory();
@@ -310,41 +305,12 @@ export default function MarginTradePage() {
         }
     };
 
-    // Get the appropriate button label
-    const getButtonLabel = () => {
-        if (isConfirming || isWritePending) {
-            if (needsApproval && approvalStep === 'wallet')
-                return 'Approving Wallet...';
-            if (needsApproval && approvalStep === 'factory')
-                return 'Approving Factory...';
-            return 'Creating Position...';
-        }
-
-        if (needsApproval) {
-            if (approvalStep === 'wallet') return 'Approve Wallet';
-            if (approvalStep === 'factory') return 'Approve Position Factory';
-        }
-
-        return 'Create Position';
-    };
-
-    // Handle button click based on current step
-    const handleButtonClick = () => {
-        if (needsApproval) {
-            if (approvalStep === 'wallet') {
-                handleApproveWallet();
-            }
-        } else {
-            handleOpenPosition();
-        }
-    };
-
     if (!pool) {
         return (
             <div className='container mx-auto px-4 py-8'>
                 <div className='text-center'>
                     <h1 className='text-2xl font-bold mb-4'>Pool not found</h1>
-                    <Button onClick={() => router.back()}>
+                    <Button onClick={() => router.push(`/margin`)}>
                         <ArrowLeft className='size-4 mr-2' />
                         Go Back
                     </Button>
@@ -358,7 +324,7 @@ export default function MarginTradePage() {
             <Button
                 variant='ghost'
                 className='mb-6'
-                onClick={() => router.back()}
+                onClick={() => router.push(`/margin`)}
             >
                 <ArrowLeft className='size-4 mr-2' />
                 Back

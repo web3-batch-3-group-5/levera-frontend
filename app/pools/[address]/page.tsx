@@ -8,7 +8,6 @@ import { ArrowLeft, Wallet, Percent, Database, BarChart3 } from 'lucide-react';
 import { Address, formatUnits } from 'viem';
 import { useRouter } from 'next/navigation';
 import { formatAddress } from '@/lib/utils';
-import { useAccount } from 'wagmi';
 
 // Helper function to format decimals consistently
 const formatTokenAmount = (amount: bigint | undefined, decimals: number = 18) => {
@@ -29,7 +28,6 @@ const formatPercentage = (value: number) => {
 export default function PoolDetailsPage() {
     const params = useParams();
     const router = useRouter();
-    const { address } = useAccount();
     const poolAddress = params.address as Address;
 
     const { poolAddresses, pools } = useLendingPoolFactory();
@@ -40,7 +38,6 @@ export default function PoolDetailsPage() {
         totalSupplyAssets,
         totalSupplyShares,
         totalBorrowAssets,
-        totalBorrowShares,
         userSupplyShares,
         interestRate,
         isSupplyPending,
@@ -62,7 +59,7 @@ export default function PoolDetailsPage() {
             <div className="container mx-auto px-4 py-8">
                 <div className="text-center">
                     <h1 className="text-2xl font-bold mb-4">Pool not found</h1>
-                    <Button onClick={() => router.back()}>
+                    <Button onClick={() => router.push(`/pools`)}>
                         <ArrowLeft className="size-4 mr-2" />
                         Go Back
                     </Button>
