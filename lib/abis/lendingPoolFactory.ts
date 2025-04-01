@@ -5,6 +5,11 @@ export const lendingPoolFactoryABI = [
                 "internalType": "address",
                 "name": "_router",
                 "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_vault",
+                "type": "address"
             }
         ],
         "stateMutability": "nonpayable",
@@ -34,9 +39,9 @@ export const lendingPoolFactoryABI = [
         "anonymous": false,
         "inputs": [
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
-                "name": "lendingPool",
+                "name": "lendingPoolAddr",
                 "type": "address"
             },
             {
@@ -50,6 +55,12 @@ export const lendingPoolFactoryABI = [
                 "internalType": "address",
                 "name": "collateralToken",
                 "type": "address"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint8",
+                "name": "positionType",
+                "type": "uint8"
             },
             {
                 "indexed": false,
@@ -71,34 +82,10 @@ export const lendingPoolFactoryABI = [
         "anonymous": false,
         "inputs": [
             {
-                "indexed": true,
-                "internalType": "address",
-                "name": "lendingPool",
-                "type": "address"
-            },
-            {
                 "indexed": false,
                 "internalType": "address",
-                "name": "loanToken",
+                "name": "lendingPoolAddr",
                 "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "address",
-                "name": "collateralToken",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "address",
-                "name": "creator",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "bool",
-                "name": "isActive",
-                "type": "bool"
             }
         ],
         "name": "CreateLendingPool",
@@ -108,9 +95,9 @@ export const lendingPoolFactoryABI = [
         "anonymous": false,
         "inputs": [
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
-                "name": "lendingPool",
+                "name": "lendingPoolAddr",
                 "type": "address"
             }
         ],
@@ -121,34 +108,10 @@ export const lendingPoolFactoryABI = [
         "anonymous": false,
         "inputs": [
             {
-                "indexed": true,
-                "internalType": "address",
-                "name": "lendingPool",
-                "type": "address"
-            },
-            {
                 "indexed": false,
                 "internalType": "address",
-                "name": "loanToken",
+                "name": "lendingPoolAddr",
                 "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "address",
-                "name": "collateralToken",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "address",
-                "name": "creator",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "bool",
-                "name": "isActive",
-                "type": "bool"
             }
         ],
         "name": "StoreLendingPool",
@@ -366,6 +329,19 @@ export const lendingPoolFactoryABI = [
         "name": "updateLendingPoolStatus",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "vault",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     }
 ] as const;

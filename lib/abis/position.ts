@@ -8,11 +8,6 @@ export const positionABI = [
             },
             {
                 "internalType": "address",
-                "name": "_router",
-                "type": "address"
-            },
-            {
-                "internalType": "address",
                 "name": "_creator",
                 "type": "address"
             }
@@ -32,12 +27,12 @@ export const positionABI = [
     },
     {
         "inputs": [],
-        "name": "InvalidToken",
+        "name": "LeverageTooHigh",
         "type": "error"
     },
     {
         "inputs": [],
-        "name": "LeverageTooHigh",
+        "name": "NegativeAnswer",
         "type": "error"
     },
     {
@@ -47,7 +42,22 @@ export const positionABI = [
     },
     {
         "inputs": [],
+        "name": "PositionAlreadyLiquidated",
+        "type": "error"
+    },
+    {
+        "inputs": [],
         "name": "PositionAtRisk",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "PositionHealthy",
+        "type": "error"
+    },
+    {
+        "inputs": [],
+        "name": "Unauthorized",
         "type": "error"
     },
     {
@@ -64,13 +74,13 @@ export const positionABI = [
         "anonymous": false,
         "inputs": [
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
-                "name": "lendingPool",
+                "name": "lendingPoolAddr",
                 "type": "address"
             },
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
                 "name": "caller",
                 "type": "address"
@@ -78,19 +88,13 @@ export const positionABI = [
             {
                 "indexed": false,
                 "internalType": "address",
-                "name": "onBehalf",
+                "name": "positionAddr",
                 "type": "address"
             },
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "baseCollateral",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "effectiveCollateral",
+                "name": "totalCollateral",
                 "type": "uint256"
             },
             {
@@ -103,24 +107,6 @@ export const positionABI = [
                 "indexed": false,
                 "internalType": "uint256",
                 "name": "leverage",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "liquidationPrice",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "health",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "ltv",
                 "type": "uint256"
             }
         ],
@@ -131,13 +117,13 @@ export const positionABI = [
         "anonymous": false,
         "inputs": [
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
-                "name": "lendingPool",
+                "name": "lendingPoolAddr",
                 "type": "address"
             },
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
                 "name": "caller",
                 "type": "address"
@@ -145,19 +131,13 @@ export const positionABI = [
             {
                 "indexed": false,
                 "internalType": "address",
-                "name": "onBehalf",
+                "name": "positionAddr",
                 "type": "address"
             },
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "baseCollateral",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "effectiveCollateral",
+                "name": "totalCollateral",
                 "type": "uint256"
             },
             {
@@ -170,24 +150,6 @@ export const positionABI = [
                 "indexed": false,
                 "internalType": "uint256",
                 "name": "leverage",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "liquidationPrice",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "health",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "ltv",
                 "type": "uint256"
             }
         ],
@@ -198,13 +160,13 @@ export const positionABI = [
         "anonymous": false,
         "inputs": [
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
-                "name": "lendingPool",
+                "name": "lendingPoolAddr",
                 "type": "address"
             },
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
                 "name": "caller",
                 "type": "address"
@@ -212,19 +174,13 @@ export const positionABI = [
             {
                 "indexed": false,
                 "internalType": "address",
-                "name": "onBehalf",
+                "name": "positionAddr",
                 "type": "address"
             },
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "baseCollateral",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "effectiveCollateral",
+                "name": "totalCollateral",
                 "type": "uint256"
             },
             {
@@ -237,24 +193,6 @@ export const positionABI = [
                 "indexed": false,
                 "internalType": "uint256",
                 "name": "leverage",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "liquidationPrice",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "health",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "ltv",
                 "type": "uint256"
             }
         ],
@@ -267,7 +205,7 @@ export const positionABI = [
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "lendingPool",
+                "name": "lendingPoolAddr",
                 "type": "address"
             },
             {
@@ -279,7 +217,7 @@ export const positionABI = [
             {
                 "indexed": false,
                 "internalType": "address",
-                "name": "onBehalf",
+                "name": "positionAddr",
                 "type": "address"
             },
             {
@@ -291,7 +229,7 @@ export const positionABI = [
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "effectiveCollateral",
+                "name": "totalCollateral",
                 "type": "uint256"
             },
             {
@@ -323,6 +261,12 @@ export const positionABI = [
                 "internalType": "uint256",
                 "name": "ltv",
                 "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint8",
+                "name": "status",
+                "type": "uint8"
             }
         ],
         "name": "UserPosition",
@@ -332,13 +276,13 @@ export const positionABI = [
         "anonymous": false,
         "inputs": [
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
-                "name": "lendingPool",
+                "name": "lendingPoolAddr",
                 "type": "address"
             },
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
                 "name": "caller",
                 "type": "address"
@@ -346,19 +290,13 @@ export const positionABI = [
             {
                 "indexed": false,
                 "internalType": "address",
-                "name": "onBehalf",
+                "name": "positionAddr",
                 "type": "address"
             },
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "baseCollateral",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "effectiveCollateral",
+                "name": "totalCollateral",
                 "type": "uint256"
             },
             {
@@ -371,24 +309,6 @@ export const positionABI = [
                 "indexed": false,
                 "internalType": "uint256",
                 "name": "leverage",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "liquidationPrice",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "health",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "uint256",
-                "name": "ltv",
                 "type": "uint256"
             }
         ],
@@ -597,6 +517,19 @@ export const positionABI = [
     },
     {
         "inputs": [],
+        "name": "liquidatePosition",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "liquidationPrice",
         "outputs": [
             {
@@ -676,16 +609,16 @@ export const positionABI = [
         "type": "function"
     },
     {
-        "inputs": [],
-        "name": "router",
-        "outputs": [
+        "inputs": [
             {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
             }
         ],
-        "stateMutability": "view",
+        "name": "repay",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -693,6 +626,19 @@ export const positionABI = [
         "name": "setRiskInfo",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "status",
+        "outputs": [
+            {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
