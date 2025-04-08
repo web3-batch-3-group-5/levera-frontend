@@ -45,6 +45,11 @@ export const lendingPoolABI = [
                 "internalType": "address",
                 "name": "_creator",
                 "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_vault",
+                "type": "address"
             }
         ],
         "stateMutability": "nonpayable",
@@ -77,6 +82,11 @@ export const lendingPoolABI = [
     },
     {
         "inputs": [],
+        "name": "InvalidToken",
+        "type": "error"
+    },
+    {
+        "inputs": [],
         "name": "NoActivePosition",
         "type": "error"
     },
@@ -99,15 +109,15 @@ export const lendingPoolABI = [
         "anonymous": false,
         "inputs": [
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
-                "name": "lendingPool",
+                "name": "lendingPoolAddr",
                 "type": "address"
             },
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "prevBorrowRate",
+                "name": "prevInterest",
                 "type": "uint256"
             },
             {
@@ -126,19 +136,7 @@ export const lendingPoolABI = [
             {
                 "indexed": true,
                 "internalType": "address",
-                "name": "lendingPool",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "address",
-                "name": "loanToken",
-                "type": "address"
-            },
-            {
-                "indexed": false,
-                "internalType": "address",
-                "name": "collateralToken",
+                "name": "lendingPoolAddr",
                 "type": "address"
             },
             {
@@ -170,6 +168,18 @@ export const lendingPoolABI = [
                 "internalType": "uint256",
                 "name": "totalCollateral",
                 "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "ltp",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "interestRate",
+                "type": "uint256"
             }
         ],
         "name": "LendingPoolStat",
@@ -179,13 +189,13 @@ export const lendingPoolABI = [
         "anonymous": false,
         "inputs": [
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
-                "name": "lendingPool",
+                "name": "lendingPoolAddr",
                 "type": "address"
             },
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
                 "name": "caller",
                 "type": "address"
@@ -193,7 +203,7 @@ export const lendingPoolABI = [
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "supplyShare",
+                "name": "supplyShares",
                 "type": "uint256"
             }
         ],
@@ -204,13 +214,13 @@ export const lendingPoolABI = [
         "anonymous": false,
         "inputs": [
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
-                "name": "lendingPool",
+                "name": "lendingPoolAddr",
                 "type": "address"
             },
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
                 "name": "caller",
                 "type": "address"
@@ -218,7 +228,7 @@ export const lendingPoolABI = [
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "supplyShare",
+                "name": "supplyShares",
                 "type": "uint256"
             }
         ],
@@ -229,13 +239,13 @@ export const lendingPoolABI = [
         "anonymous": false,
         "inputs": [
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
-                "name": "lendingPool",
+                "name": "lendingPoolAddr",
                 "type": "address"
             },
             {
-                "indexed": true,
+                "indexed": false,
                 "internalType": "address",
                 "name": "caller",
                 "type": "address"
@@ -243,7 +253,7 @@ export const lendingPoolABI = [
             {
                 "indexed": false,
                 "internalType": "uint256",
-                "name": "supplyShare",
+                "name": "supplyShares",
                 "type": "uint256"
             }
         ],
@@ -344,29 +354,6 @@ export const lendingPoolABI = [
             }
         ],
         "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "token",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "amount",
-                "type": "uint256"
-            },
-            {
-                "internalType": "bytes",
-                "name": "data",
-                "type": "bytes"
-            }
-        ],
-        "name": "flashLoan",
-        "outputs": [],
-        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -705,6 +692,19 @@ export const lendingPoolABI = [
                 "internalType": "uint256",
                 "name": "",
                 "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "vault",
+        "outputs": [
+            {
+                "internalType": "contract Vault",
+                "name": "",
+                "type": "address"
             }
         ],
         "stateMutability": "view",

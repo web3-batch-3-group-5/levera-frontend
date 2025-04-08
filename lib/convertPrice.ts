@@ -13,7 +13,7 @@ const priceConverter: { [key: string]: number } = {
   'laUSDC': 1,
   'laUSDT': 1,
   'laDAI': 1,
-  'laETH': 2500,
+  'laWETH': 2500,
   'laWBTC': 100_000,
 };
 

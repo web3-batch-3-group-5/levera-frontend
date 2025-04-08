@@ -20,4 +20,24 @@ export const astriaFlameDawn: Chain = {
     },
 } as const;
 
-export const customChains = [ astriaFlameDawn ];
+export const eduChainTestnet: Chain = {
+    id: 656476,
+    name: 'Educhain Testnet',
+    iconUrl: 'https://s3.coinmarketcap.com/static-gravity/image/60f1fc5d85f2463881db170b6d740876.png',
+    iconBackground: '#fff',
+    nativeCurrency: {
+        name: 'EDU',
+        symbol: 'EDU',
+        decimals: 18,
+    },
+    rpcUrls: {
+        default: {
+            http: ['https://rpc.open-campus-codex.gelato.digital'],
+        },
+    },
+    blockExplorers: {
+        default: { name: 'Educhain Explorer', url: 'https://edu-chain-testnet.blockscout.com' },
+    },
+} as const;
+
+export const customChains = [ eduChainTestnet ];
