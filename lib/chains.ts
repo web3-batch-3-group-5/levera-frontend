@@ -12,7 +12,7 @@ export const astriaFlameDawn: Chain = {
     },
     rpcUrls: {
         default: {
-            http: ['https://rpc.flame.dawn-1.astria.org'],
+            http: [process.env.NEXT_PUBLIC_ASTRIA_FLAME_DAWN_RPC_URL || ''],
         },
     },
     blockExplorers: {
