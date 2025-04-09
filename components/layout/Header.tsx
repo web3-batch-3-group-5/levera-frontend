@@ -17,6 +17,7 @@ export function Header() {
         { name: 'Home', href: '/' },
         { name: 'Earn', href: '/pools' },
         { name: 'Margin', href: '/margin' },
+        { name: 'Faucet', href: '/faucet' },
     ];
 
     const isActive = (href: string) => pathname === href;

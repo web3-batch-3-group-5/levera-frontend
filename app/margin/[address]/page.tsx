@@ -126,17 +126,6 @@ export default function MarginDetailsPage() {
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">Pool Address: {formatAddress(poolAddress)}</p>
                     </div>
-                    <div>
-                        {isClient && isConnected && (
-                            <Button 
-                                onClick={handleOpenPosition}
-                                className="gap-2"
-                            >
-                                <Plus className="size-4" />
-                                Open Position
-                            </Button>
-                        )}
-                    </div>
                 </div>
 
                 {/* Pool Stats */}
