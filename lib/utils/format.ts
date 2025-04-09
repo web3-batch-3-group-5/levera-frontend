@@ -1,43 +1,75 @@
-import { formatUnits } from 'viem';
+import { formatUnits, Address, erc20Abi, createPublicClient, http } from 'viem';
 
-interface FormatTokenAmountOptions {
-    decimals?: number;
-    minimumFractionDigits?: number;
-    maximumFractionDigits?: number;
-    compact?: boolean;
-}
+// Simple public client for Educhain
+const publicClient = createPublicClient({
+  transport: http('https://rpc.open-campus-codex.gelato.digital/'),
+});
+
+// Cache for token decimals to avoid repeated calls
+const tokenDecimalsCache = new Map<string, number>();
 
 export function formatTokenAmount(
     amount: bigint | undefined,
-    options: FormatTokenAmountOptions = {}
+    options: {
+      tokenAddress?: Address;
+      decimals?: number;
+      minimumFractionDigits?: number;
+      maximumFractionDigits?: number;
+    } = {}
 ): string {
     if (!amount) return '0.00';
 
     const {
-        decimals = 18,
-        minimumFractionDigits = 2,
-        maximumFractionDigits = 4,
-        compact = false
+      tokenAddress,
+      decimals = 18,
+      minimumFractionDigits = 2,
+      maximumFractionDigits = 4
     } = options;
 
-    try {
-        // Convert from token base units to decimal representation
-        const formattedAmount = formatUnits(amount, decimals);
-        const numericAmount = parseFloat(formattedAmount);
+    let tokenDecimals = decimals;
 
-        // Format with number formatter
-        const formatter = new Intl.NumberFormat('en-US', {
-            minimumFractionDigits,
-            maximumFractionDigits,
-            notation: compact ? 'compact' : 'standard',
-            compactDisplay: 'short'
-        });
-
-        return formatter.format(numericAmount);
-    } catch (error) {
-        console.error('Error formatting token amount:', error);
-        return '0.00';
+    if (tokenAddress) {
+      const cachedDecimals = tokenDecimalsCache.get(tokenAddress.toLowerCase());
+      if (cachedDecimals !== undefined) {
+        tokenDecimals = cachedDecimals;
+      } else {
+        fetchTokenDecimals(tokenAddress);
+      }
     }
+
+    try {
+      const formattedAmount = formatUnits(amount, tokenDecimals);
+      const numericAmount = parseFloat(formattedAmount);
+
+      return numericAmount.toLocaleString('en-US', {
+        minimumFractionDigits,
+        maximumFractionDigits
+      });
+    } catch (error) {
+      console.error('Error formatting amount:', error);
+      return '0.00';
+    }
+}
+
+async function fetchTokenDecimals(tokenAddress: Address): Promise<void> {
+  if (!tokenAddress) return;
+  
+  const cacheKey = tokenAddress.toLowerCase();
+  
+  if (tokenDecimalsCache.has(cacheKey)) return;
+  
+  try {
+    const decimals = await publicClient.readContract({
+      address: tokenAddress,
+      abi: erc20Abi,
+      functionName: 'decimals',
+    }) as number;
+    
+    tokenDecimalsCache.set(cacheKey, decimals);
+    console.log(`Cached decimals for ${tokenAddress}: ${decimals}`);
+  } catch (error) {
+    console.error(`Failed to fetch decimals for ${tokenAddress}:`, error);
+  }
 }
 
 // Example usage:

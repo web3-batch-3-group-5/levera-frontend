@@ -8,15 +8,7 @@ import { ArrowLeft, Wallet, Percent, Database, BarChart3 } from 'lucide-react';
 import { Address, formatUnits } from 'viem';
 import { useRouter } from 'next/navigation';
 import { formatAddress } from '@/lib/utils';
-
-// Helper function to format decimals consistently
-const formatTokenAmount = (amount: bigint | undefined, decimals: number = 18) => {
-    if (!amount) return '0.00';
-    return Number(formatUnits(amount, decimals)).toLocaleString(undefined, {
-        maximumFractionDigits: 4,
-        minimumFractionDigits: 2
-    });
-};
+import { formatTokenAmount } from '@/lib/utils/format';
 
 const formatPercentage = (value: number) => {
     return value.toLocaleString(undefined, {
@@ -140,7 +132,7 @@ export default function PoolDetailsPage() {
                             <h3 className="text-sm font-medium">Supply</h3>
                         </div>
                         <p className="text-2xl font-bold">
-                            {formatTokenAmount(totalSupplyAssets)} {pool.loanTokenSymbol}
+                            {formatTokenAmount(totalSupplyAssets, { tokenAddress: pool.loanToken })} {pool.loanTokenSymbol}
                         </p>
                     </div>
 
@@ -150,7 +142,7 @@ export default function PoolDetailsPage() {
                             <h3 className="text-sm font-medium">Borrowed</h3>
                         </div>
                         <p className="text-2xl font-bold">
-                            {formatTokenAmount(totalBorrowAssets)} {pool.loanTokenSymbol}
+                            {formatTokenAmount(totalBorrowAssets, { tokenAddress: pool.loanToken })} {pool.loanTokenSymbol}
                         </p>
                     </div>
 

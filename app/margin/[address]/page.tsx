@@ -265,12 +265,12 @@ export default function MarginDetailsPage() {
                             
                             <div>
                                 <p className="text-sm text-muted-foreground">Total Supply</p>
-                                <p className="font-medium">{formatTokenAmount(totalSupplyAssets || 0n)} {pool.loanTokenSymbol}</p>
+                                <p className="font-medium">{formatTokenAmount(totalSupplyAssets, { tokenAddress: pool.loanToken })} {pool.loanTokenSymbol}</p>
                             </div>
                             
                             <div>
                                 <p className="text-sm text-muted-foreground">Total Borrowed</p>
-                                <p className="font-medium">{formatTokenAmount(totalBorrowAssets || 0n)} {pool.loanTokenSymbol}</p>
+                                <p className="font-medium">{formatTokenAmount(totalBorrowAssets, { tokenAddress: pool.loanToken })} {pool.loanTokenSymbol}</p>
                             </div>
                             
                             <div>

@@ -149,7 +149,7 @@ export function PoolCard({ poolAddress, pool, onSupply }: PoolCardProps) {
                         <div className="h-5 bg-muted/50 rounded w-24 animate-pulse"></div>
                     ) : (
                         <p className="font-medium">
-                            {formatTokenAmount(totalSupplyAssets)} {pool.loanTokenSymbol}
+                            {formatTokenAmount(totalSupplyAssets, { tokenAddress: pool.loanToken })} {pool.loanTokenSymbol}
                         </p>
                     )}
                 </div>
@@ -163,7 +163,7 @@ export function PoolCard({ poolAddress, pool, onSupply }: PoolCardProps) {
                         <div className="h-5 bg-muted/50 rounded w-24 animate-pulse"></div>
                     ) : (
                         <p className="font-medium">
-                            {formatTokenAmount(totalBorrowAssets)} {pool.loanTokenSymbol}
+                            {formatTokenAmount(totalBorrowAssets, { tokenAddress: pool.loanToken })} {pool.loanTokenSymbol}
                         </p>
                     )}
                 </div>
