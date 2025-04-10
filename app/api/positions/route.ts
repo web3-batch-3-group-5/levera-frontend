@@ -5,14 +5,20 @@ import { positionFactoryABI } from '@/lib/abis/positionFactory';
 import { CONTRACTS } from '@/config/contracts';
 import { LRUCache as LRU } from 'lru-cache';
 
+type CachedRateLimit = {
+  id: string;
+  address: `0x${string}`;
+  lendingPoolAddress: `0x${string}`;
+}
+
 // Configure rateLimiter cache (15s TTL, max 100 entries)
-const rateLimiter = new LRU<string, any>({
+const rateLimiter = new LRU<string, CachedRateLimit[]>({
   max: 100,
   ttl: 15_000,
 });
 
 // Add request queue for concurrency control
-const requestQueue = new Map<string, Promise<any>>();
+const requestQueue = new Map<string, Promise<NextResponse<CachedRateLimit[]>>>();
 
 // Helper to get chain configuration
 const getChainConfig = (chainId: number) => {

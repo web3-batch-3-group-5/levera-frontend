@@ -5,7 +5,7 @@ import { useLendingPool } from '@/hooks/useLendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
 import { Button } from '@/components/shared/Button';
 import { ArrowLeft, Wallet, Percent, Database, BarChart3 } from 'lucide-react';
-import { Address, formatUnits } from 'viem';
+import { Address } from 'viem';
 import { useRouter } from 'next/navigation';
 import { formatAddress } from '@/lib/utils';
 import { formatTokenAmount } from '@/lib/utils/format';
@@ -36,8 +36,7 @@ export default function PoolDetailsPage() {
     totalBorrowAssets,
     userSupplyShares,
     interestRate,
-    isSupplyPending,
-    isWithdrawPending,
+    isPending,
   } = useLendingPool(poolAddress);
 
   // Calculate utilization rate
@@ -120,7 +119,7 @@ export default function PoolDetailsPage() {
             <div className='flex gap-3'>
               <Button
                 onClick={() => router.push(`/pools/${poolAddress}/supply`)}
-                disabled={!pool.isActive || isSupplyPending}
+                disabled={!pool.isActive || isPending}
               >
                 Supply
               </Button>
@@ -129,7 +128,7 @@ export default function PoolDetailsPage() {
                 onClick={() => router.push(`/pools/${poolAddress}/withdraw`)}
                 disabled={
                   !pool.isActive ||
-                  isWithdrawPending ||
+                  isPending ||
                   !userBalance ||
                   userBalance === 0n
                 }

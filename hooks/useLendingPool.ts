@@ -100,7 +100,7 @@ export function useLendingPool(poolAddress: Address) {
     ltp: rawData?.ltp,
     
     // User data
-    supplyShares: rawData?.userSupplyShares,
+    userSupplyShares: rawData?.userSupplyShares,
     
     // Actions
     supply,
@@ -109,6 +109,6 @@ export function useLendingPool(poolAddress: Address) {
     // State management
     isLoading,
     error,
-    isPending
+    isPending,
   };
 }

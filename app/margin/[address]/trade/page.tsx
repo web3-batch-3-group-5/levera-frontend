@@ -79,7 +79,7 @@ export default function MarginTradePage() {
 
   // Check if approval is needed
   useEffect(() => {
-    if (!walletAllowance || !pool?.collateralToken) return;
+    if (!walletAllowance || !pool?.collateralTokenDecimals) return;
 
     try {
       // Only need approval if allowance is very small
@@ -91,7 +91,7 @@ export default function MarginTradePage() {
     } catch (error) {
       console.error('Error checking allowance:', error);
     }
-  }, [walletAllowance, pool?.collateralToken]);
+  }, [walletAllowance, pool?.collateralTokenDecimals]);
 
   // Watch for transaction completion
   useEffect(() => {

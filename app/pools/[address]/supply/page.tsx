@@ -92,12 +92,6 @@ export default function SupplyPage() {
           amountBigInt > 0n &&
           (currentAllowance === undefined || currentAllowance < amountBigInt);
 
-        console.log('Approval check:', {
-          amount: amountBigInt.toString(),
-          allowance: currentAllowance?.toString(),
-          needsApproval,
-        });
-
         setNeedsApproval(needsApproval);
       } catch (error) {
         console.error('Error checking allowance:', error);
@@ -105,7 +99,14 @@ export default function SupplyPage() {
     };
 
     checkApproval();
-  }, [amount, userAddress, currentAllowance, pool, refetchAllowance]);
+  }, [
+    amount,
+    userAddress,
+    currentAllowance,
+    pool,
+    pool?.loanTokenDecimals,
+    refetchAllowance,
+  ]);
 
   // Update supplyAmount when amount changes
   useEffect(() => {

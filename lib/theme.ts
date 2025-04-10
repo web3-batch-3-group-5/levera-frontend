@@ -34,10 +34,8 @@ export function useChartColors() {
 }
 
 // Function to generate chart options that adapt to theme
-export function adaptiveChartOptions(
-  baseOptions: Record<string, any> = {}, 
-  isDarkMode: boolean
-): Record<string, any> {
+/* eslint-disable-next-line */
+export function adaptiveChartOptions(baseOptions: Record<string, any> = {}, isDarkMode: boolean): Record<string, any> {
   return {
     ...baseOptions,
     // Customize global chart appearance based on theme
