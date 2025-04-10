@@ -1,11 +1,10 @@
 'use client';
 
 import { useCallback, useState, useEffect } from 'react';
-import { useReadContract, useReadContracts, useWriteContract, useAccount } from 'wagmi';
+import { useReadContract, useReadContracts, useWriteContract, useAccount, useChainId } from 'wagmi';
 import { Address } from 'viem';
 import { CONTRACTS } from '@/config/contracts';
 import { toast } from 'sonner';
-import { positionABI } from '@/lib/abis/position';
 
 // Types
 interface PositionData {
@@ -37,13 +36,13 @@ interface PositionData {
 }
 
 export function usePositionFactory() {
+    const chainId = useChainId();
     const { address: userAddress, isConnected } = useAccount();
     const [userPositions, setUserPositions] = useState<PositionData[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
 
-    console.log('[usePositionFactory] User Address:', userAddress);
-    console.log('[usePositionFactory] isConnected:', isConnected);
+    console.log('[usePositionFactory] User Address:', userAddress, ', isConnected:', isConnected);
 
     // Read positions from the contract for all pools
     // Note: Since we don't have a function to get all positions across all pools,
@@ -89,8 +88,6 @@ export function usePositionFactory() {
                     .map(result => result.result as Address)
                     .filter(addr => !!addr && addr !== '0x0000000000000000000000000000000000000000');
 
-                console.log('[getAllPositions] Valid pools:', validPools);
-
                 // Get positions for each pool
                 const allPositionsPromises = validPools.map(poolAddress => 
                     fetchPoolPositions(poolAddress, userAddress as Address)
@@ -117,8 +114,6 @@ export function usePositionFactory() {
                         console.error(`Error fetching positions for pool ${validPools[index]}:`, result.reason);
                     }
                 });
-
-                console.log('[getAllPositions] All positions:', allPositions);
                 
                 if (allPositions.length > 0) {
                     // Fetch additional position data if needed
@@ -141,7 +136,7 @@ export function usePositionFactory() {
     // Helper function to fetch positions for a single pool
     const fetchPoolPositions = async (poolAddress: Address, userAddress: Address): Promise<PositionData[]> => {
         try {
-            const result = await fetch(`/api/positions?poolAddress=${poolAddress}&userAddress=${userAddress}`);
+            const result = await fetch(`/api/positions?chainId=${chainId}&poolAddress=${poolAddress}&userAddress=${userAddress}`);
             
             // This is a mock response - in a real app you would use your backend/subgraph
             // or directly query the contract
@@ -172,13 +167,10 @@ export function usePositionFactory() {
     // Refresh function to manually trigger data refetch
     const refresh = useCallback(async () => {
         try {
-            console.log('[refresh] Refreshing user positions...');
             setIsLoading(true);
             
             // Refetch positions
             await refetchPositionAddresses();
-            
-            console.log('[refresh] Refetch complete');
             return true;
         } catch (err) {
             console.error('[refresh] Error refreshing positions:', err);
@@ -200,13 +192,6 @@ export function usePositionFactory() {
         try {
             // Convert leverage to contract format (e.g., 1.5 -> 150)
             const leverageBps = BigInt(Math.floor(leverage * 100));
-
-            console.log('[createPosition] Creating position with:', {
-                lendingPoolAddress,
-                baseCollateral: baseCollateral.toString(),
-                leverage,
-                leverageBps: leverageBps.toString(),
-            });
 
             toast.loading('Creating position...', { id: 'create-position' });
 
@@ -254,11 +239,6 @@ export function usePositionFactory() {
         if (!userAddress) throw new Error('Wallet not connected');
 
         try {
-            console.log('[deletePosition] Closing position for:', {
-                lendingPoolAddress,
-                onBehalf,
-            });
-
             toast.loading('Closing position...', { id: 'close-position' });
 
             const hash = await writeContract({
@@ -299,22 +279,18 @@ export function usePositionFactory() {
 
     // Get a position by address
     const getPositionByAddress = useCallback((positionAddress: Address) => {
-        console.log('[getPositionByAddress] Searching for position:', positionAddress);
         const position = userPositions.find(position => 
             position.address.toLowerCase() === positionAddress.toLowerCase()
         );
-        console.log('[getPositionByAddress] Found:', position);
         return position;
     }, [userPositions]);
 
     // Get positions for a specific lending pool
     const getPositionsByLendingPool = useCallback((lendingPoolAddress: Address) => {
-        console.log('[getPositionsByLendingPool] Searching for positions in pool:', lendingPoolAddress);
         const positions = userPositions.filter(position => {
             const poolAddress = position.lendingPoolAddress || position.pool?.address || position.lendingPool?.address;
             return poolAddress?.toLowerCase() === lendingPoolAddress.toLowerCase();
         });
-        console.log('[getPositionsByLendingPool] Found:', positions);
         return positions;
     }, [userPositions]);
 

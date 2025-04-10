@@ -1,119 +1,114 @@
 'use client';
 
-import { useCallback } from 'react';
-import { useReadContract, useWriteContract, useAccount } from 'wagmi';
+import { useCallback, useMemo } from 'react';
+import { 
+  useReadContracts,
+  useWriteContract, 
+  useAccount 
+} from 'wagmi';
 import { Address, zeroAddress } from 'viem';
 import { lendingPoolABI } from '@/lib/abis/lendingPool';
 
+type ContractDataResult = {
+  totalSupplyAssets?: bigint;
+  totalSupplyShares?: bigint;
+  totalBorrowAssets?: bigint;
+  totalBorrowShares?: bigint;
+  interestRate?: bigint;
+  ltp?: bigint;
+  userSupplyShares?: bigint;
+};
+
 export function useLendingPool(poolAddress: Address) {
-    const { address: userAddress } = useAccount();
+  const { address: userAddress } = useAccount();
+  
+  // Batch all read calls into a single request
+  const contracts = useMemo(() => [
+    { functionName: 'totalSupplyAssets' },
+    { functionName: 'totalSupplyShares' },
+    { functionName: 'totalBorrowAssets' },
+    { functionName: 'totalBorrowShares' },
+    { functionName: 'interestRate' },
+    { functionName: 'ltp' },
+    ...(userAddress ? [{
+      functionName: 'userSupplyShares',
+      args: [userAddress]
+    }] : [])
+  ].map(config => ({
+    address: poolAddress,
+    abi: lendingPoolABI,
+    ...config
+  })), [poolAddress, userAddress]);
 
-    // Read total supply and borrow info
-    const { data: totalSupplyAssets, isLoading: isLoadingSupply, error: supplyError } = useReadContract({
-        address: poolAddress,
-        abi: lendingPoolABI,
-        functionName: 'totalSupplyAssets',
-    });
+  const { 
+    data: rawData, 
+    isLoading, 
+    error 
+  } = useReadContracts({
+    contracts,
+    query: {
+      select: (data) => ({
+        totalSupplyAssets: data[0]?.result,
+        totalSupplyShares: data[1]?.result,
+        totalBorrowAssets: data[2]?.result,
+        totalBorrowShares: data[3]?.result,
+        interestRate: data[4]?.result,
+        ltp: data[5]?.result,
+        userSupplyShares: data[6]?.result
+      } as ContractDataResult)
+    }
+  });
 
-    const { data: totalSupplyShares } = useReadContract({
-        address: poolAddress,
-        abi: lendingPoolABI,
-        functionName: 'totalSupplyShares',
-    });
+  // Unified write contract handler
+  const { writeContract, isPending } = useWriteContract();
 
-    const { data: totalBorrowAssets, isLoading: isLoadingBorrow, error: borrowError } = useReadContract({
-        address: poolAddress,
-        abi: lendingPoolABI,
-        functionName: 'totalBorrowAssets',
-    });
+  const handleWriteCall = useCallback(
+    async (functionName: 'supply' | 'withdraw', args: [bigint]) => {
+      try {
+        return await writeContract({
+          address: poolAddress,
+          abi: lendingPoolABI,
+          functionName,
+          args
+        });
+      } catch (err) {
+        console.error(`Error in ${functionName}:`, err);
+        throw err;
+      }
+    },
+    [writeContract, poolAddress]
+  );
 
-    const { data: totalBorrowShares } = useReadContract({
-        address: poolAddress,
-        abi: lendingPoolABI,
-        functionName: 'totalBorrowShares',
-    });
+  // Memoized actions
+  const supply = useCallback(
+    (amount: bigint) => handleWriteCall('supply', [amount]),
+    [handleWriteCall]
+  );
 
-    const { data: interestRate, isLoading: isLoadingInterestRate, error: interestRateError } = useReadContract({
-        address: poolAddress,
-        abi: lendingPoolABI,
-        functionName: 'interestRate',
-    });
+  const withdraw = useCallback(
+    (shares: bigint) => handleWriteCall('withdraw', [shares]),
+    [handleWriteCall]
+  );
 
-    const { data: ltp } = useReadContract({
-        address: poolAddress,
-        abi: lendingPoolABI,
-        functionName: 'ltp',
-    });
-
-    // User-specific data if user is connected
-    const { data: userSupplyShares } = useReadContract({
-        address: poolAddress,
-        abi: lendingPoolABI,
-        functionName: 'userSupplyShares',
-        args: [userAddress || zeroAddress],
-        query: {
-            enabled: !!userAddress,
-        }
-    });
-
-    // Supply functionality
-    const { writeContract, isPending: isSupplyPending } = useWriteContract();
-
-    const supply = useCallback(async (amount: bigint) => {
-        try {
-            return await writeContract({
-                address: poolAddress,
-                abi: lendingPoolABI,
-                functionName: 'supply',
-                args: [amount],
-            });
-        } catch (err) {
-            console.error('Error supplying to pool:', err);
-            throw err;
-        }
-    }, [writeContract, poolAddress]);
-
-    // Withdraw functionality
-    const { writeContract: writeWithdraw, isPending: isWithdrawPending } = useWriteContract();
-
-    const withdraw = useCallback(async (shares: bigint) => {
-        try {
-            return await writeWithdraw({
-                address: poolAddress,
-                abi: lendingPoolABI,
-                functionName: 'withdraw',
-                args: [shares],
-            });
-        } catch (err) {
-            console.error('Error withdrawing from pool:', err);
-            throw err;
-        }
-    }, [writeWithdraw, poolAddress]);
-
-    // Combine errors
-    const error = supplyError || borrowError || interestRateError;
-    const isLoading = isLoadingSupply || isLoadingBorrow || isLoadingInterestRate;
-
-    return {
-        // Pool data
-        totalSupplyAssets,
-        totalSupplyShares,
-        totalBorrowAssets,
-        totalBorrowShares,
-        interestRate,
-        ltp,
-        
-        // User data
-        userSupplyShares,
-        
-        // Actions
-        supply,
-        withdraw,
-        
-        // Loading and error states
-        isLoading,
-        error,
-        isSupplyPending,
-        isWithdrawPending,
-    };
+  return {
+    // Pool data
+    totalSupplyAssets: rawData?.totalSupplyAssets,
+    totalSupplyShares: rawData?.totalSupplyShares,
+    totalBorrowAssets: rawData?.totalBorrowAssets,
+    totalBorrowShares: rawData?.totalBorrowShares,
+    interestRate: rawData?.interestRate,
+    ltp: rawData?.ltp,
+    
+    // User data
+    supplyShares: rawData?.userSupplyShares,
+    
+    // Actions
+    supply,
+    withdraw,
+    
+    // State management
+    isLoading,
+    error,
+    isPending
+  };
 }
