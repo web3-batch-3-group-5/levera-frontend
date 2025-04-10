@@ -2,9 +2,8 @@
 
 import { useCallback, useState, useEffect } from 'react';
 import { useReadContract, useWriteContract } from 'wagmi';
-import { Address, formatUnits, isAddress } from 'viem';
+import { Address, isAddress } from 'viem';
 import { positionABI } from '@/lib/abis/position';
-import { toast } from 'sonner';
 
 export function usePosition(positionAddress: Address | string | undefined) {
     const [isLoading, setIsLoading] = useState(true);
@@ -341,18 +340,6 @@ export function usePosition(positionAddress: Address | string | undefined) {
         }
     }, [writeContract, validatedAddress]);
 
-    // Create formatted values for UI display
-    const formattedValues = {
-        baseCollateral: baseCollateral ? formatUnits(baseCollateral, 18) : '0',
-        effectiveCollateral: effectiveCollateral ? formatUnits(effectiveCollateral, 18) : '0',
-        borrowShares: borrowShares ? formatUnits(borrowShares, 18) : '0',
-        leverage: leverage ? Number(leverage) / 100 : 1, // Convert from basis points to decimal
-        liquidationPrice: liquidationPrice ? formatUnits(liquidationPrice, 18) : '0',
-        health: health ? (Number(health) / 100).toFixed(2) : '0.00', // Assuming health is in basis points
-        ltv: ltv ? Number(ltv) / 10000 : 0, // Assuming LTV is in basis points
-        lastUpdated: lastUpdated ? new Date(Number(lastUpdated) * 1000) : new Date(),
-    };
-
     return {
         // Raw values
         baseCollateral,
@@ -364,9 +351,6 @@ export function usePosition(positionAddress: Address | string | undefined) {
         ltv,
         lastUpdated,
         lendingPoolAddress,
-
-        // Formatted values
-        formattedValues,
 
         // Position actions
         addCollateral,

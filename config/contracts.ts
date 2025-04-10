@@ -21,6 +21,13 @@ export const CONTRACTS = {
     POSITION: {
         abi: positionABI,
     },
+    TOKEN_ADDRESSES: [
+        "0xe4e0BB3C56e735c72D6696B4F56B7251BB4ab35b", // LA_DAI
+        "0x74B59C6C38AEA54644527aA0c5f8f4796e777533", // LA_USDC
+        "0x5e4695a76Dc81ECc041576d672Da1208d6d8922B", // LA_USDT
+        "0x919c586538EE34B87A12c584ba6463e7e12338E9", // LA_WBTC
+        "0xe7d9E1dB89Ce03570CBA7f4C6Af80EC14a61d1db", // LA_WETH
+    ]
 } as const;
 
 export enum PositionType {
@@ -47,6 +54,8 @@ export interface PoolDetails {
     collateralTokenName: string;
     loanTokenSymbol: string;
     collateralTokenSymbol: string;
+    loanTokenDecimals: number;
+    collateralTokenDecimals: number;
     creator: Address;
     liquidationThresholdPercentage: bigint;
     interestRate: bigint;

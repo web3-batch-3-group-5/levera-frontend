@@ -1,4 +1,14 @@
 import { Chain } from '@rainbow-me/rainbowkit';
+import { arbitrumSepolia as defaultArbitrumSepolia } from 'wagmi/chains';
+
+export const arbitrumSepolia: Chain = {
+    ...defaultArbitrumSepolia,
+    rpcUrls: {
+        default: {
+            http: [process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC_URL || 'https://sepolia-rollup.arbitrum.io/rpc'],
+        },
+    },
+};
 
 export const astriaFlameDawn: Chain = {
     id: 16604737732183,
@@ -40,4 +50,4 @@ export const eduChainTestnet: Chain = {
     },
 } as const;
 
-export const customChains = [ eduChainTestnet ];
+export const customChains = [ astriaFlameDawn, eduChainTestnet ];

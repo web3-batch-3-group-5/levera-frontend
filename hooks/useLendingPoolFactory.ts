@@ -1,10 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { useReadContract, useReadContracts, useWriteContract } from 'wagmi';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useReadContracts, useWriteContract } from 'wagmi';
 import { CONTRACTS, PoolDetails, PositionType } from '@/config/contracts';
-import { Address, parseUnits } from 'viem';
-import { erc20Abi } from 'viem';
+import { Address, parseUnits, erc20Abi } from 'viem';
 import { toast } from 'sonner';
 import { lendingPoolABI } from '@/lib/abis/lendingPool';
 
@@ -20,17 +19,12 @@ export interface CreateLendingPoolParams {
 }
 
 export function useLendingPoolFactory() {
-    console.log('useLendingPoolFactory hook initialized');
-
     // State for pools data
     const [pools, setPools] = useState<PoolDetails[]>([]);
     const [poolAddresses, setPoolAddresses] = useState<Address[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
     const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
-
-    // Log contract address for debugging
-    console.log('Factory Contract address:', CONTRACTS.LENDING_POOL_FACTORY.address);
 
     // We don't have a getPoolCount function, so we'll need to iterate through the array
     // and stop when we hit a zero address or encounter an error
@@ -43,7 +37,7 @@ export function useLendingPoolFactory() {
             args: [BigInt(i)],
         })),
         query: {
-            staleTime: 60 * 1000, // 1 minute
+            staleTime: 15 * 60 * 1000, // 15 minute
         }
     });
 
@@ -57,6 +51,7 @@ export function useLendingPoolFactory() {
         })),
         query: {
             enabled: poolAddresses.length > 0,
+            staleTime: 60 * 1000, // 1 minute
         }
     });
 
@@ -106,15 +101,13 @@ export function useLendingPoolFactory() {
         ]),
         query: {
             enabled: poolAddresses.length > 0,
+            staleTime: 60 * 1000, // 1 minute
         }
     });
 
     // Process the pool addresses
     useEffect(() => {
-        console.log('Processing potential pools:', potentialPools);
-
         if (!potentialPools) {
-            console.log('No potential pools data yet');
             return;
         }
 
@@ -127,10 +120,7 @@ export function useLendingPoolFactory() {
                 .map(result => result.result as Address)
                 .filter(addr => !!addr && addr !== '0x0000000000000000000000000000000000000000');
 
-            console.log('Valid pool addresses found:', validPools);
-
             if (validPools.length === 0) {
-                console.log('No valid pool addresses found');
                 setPoolAddresses([]);
                 setPools([]);
                 setIsLoading(false);
@@ -190,8 +180,10 @@ export function useLendingPoolFactory() {
                     isActive: isActive !== undefined ? isActive : true,
                     loanTokenName: 'Unknown Token',
                     loanTokenSymbol: 'UNKNOWN',
+                    loanTokenDecimals: 18,
                     collateralTokenName: 'Unknown Token',
-                    collateralTokenSymbol: 'UNKNOWN'
+                    collateralTokenSymbol: 'UNKNOWN',
+                    collateralTokenDecimals: 18
                 };
             });
             setPoolBasicDetails(poolData);
@@ -244,6 +236,7 @@ export function useLendingPoolFactory() {
             },
         ]),
         query: {
+            staleTime: 60 * 60 * 1000, // 1 hour
             enabled: poolBasicDetails.length > 0 && poolBasicDetails.some(pool => 
                 !!pool.loanToken && pool.loanToken !== '0x0000000000000000000000000000000000000000' && 
                 !!pool.collateralToken && pool.collateralToken !== '0x0000000000000000000000000000000000000000'
@@ -264,8 +257,10 @@ export function useLendingPoolFactory() {
                 // Default values in case token queries fail
                 let loanTokenName = 'Unknown Token';
                 let loanTokenSymbol = 'UNKNOWN';
+                let loanTokenDecimals = 18;
                 let collateralTokenName = 'Unknown Token';
                 let collateralTokenSymbol = 'UNKNOWN';
+                let collateralTokenDecimals = 18;
                 
                 // Extract token details if available
                 if (tokenDetailsData[baseIndex]?.status === 'success') {
@@ -275,6 +270,10 @@ export function useLendingPoolFactory() {
                 if (tokenDetailsData[baseIndex + 1]?.status === 'success') {
                     loanTokenSymbol = tokenDetailsData[baseIndex + 1].result as string;
                 }
+
+                if (tokenDetailsData[baseIndex + 2]?.status === 'success') {
+                    loanTokenDecimals = tokenDetailsData[baseIndex + 2].result as number;
+                }
                 
                 if (tokenDetailsData[baseIndex + 3]?.status === 'success') {
                     collateralTokenName = tokenDetailsData[baseIndex + 3].result as string;
@@ -283,17 +282,22 @@ export function useLendingPoolFactory() {
                 if (tokenDetailsData[baseIndex + 4]?.status === 'success') {
                     collateralTokenSymbol = tokenDetailsData[baseIndex + 4].result as string;
                 }
+
+                if (tokenDetailsData[baseIndex + 5]?.status === 'success') {
+                    collateralTokenDecimals = tokenDetailsData[baseIndex + 5].result as number;
+                }
                 
                 return {
                     ...pool,
                     loanTokenName,
                     loanTokenSymbol,
+                    loanTokenDecimals,
                     collateralTokenName,
                     collateralTokenSymbol,
+                    collateralTokenDecimals,
                 } as PoolDetails;
             });
 
-            console.log('Processed pool details with token info:', completePools);
             setPools(completePools);
             setIsLoading(false);
             setError(null);
@@ -307,11 +311,9 @@ export function useLendingPoolFactory() {
 
     // Refresh function to manually trigger data refetch
     const refresh = useCallback(async () => {
-        console.log('Manual refresh triggered');
         try {
             setIsLoading(true);
             await refetchPotentialPools();
-            console.log('Refresh completed');
             setLastRefreshed(new Date());
             return true;
         } catch (err) {
@@ -328,8 +330,6 @@ export function useLendingPoolFactory() {
     const { writeContract, isPending: isCreatingPool } = useWriteContract();
 
     const createLendingPool = useCallback(async (params: CreateLendingPoolParams) => {
-        console.log('Creating lending pool with params:', params);
-
         try {
             const liquidationThreshold = parseUnits(params.liquidationThresholdPercentage, 0);
             const interestRate = parseUnits(params.interestRate, 0);
@@ -349,8 +349,6 @@ export function useLendingPoolFactory() {
                 ],
             }, {
                 onSuccess: (hash) => {
-                    console.log('Lending pool creation result:', hash);
-                    
                     // Refresh the pools list after successful creation
                     toast.promise(refresh(), {
                         loading: 'Updating pool list...',
@@ -373,33 +371,18 @@ export function useLendingPoolFactory() {
 
     // Get pool info by address
     const getPoolInfo = useCallback((poolAddress: Address) => {
-        console.log('Getting pool info for address:', poolAddress);
         const poolIndex = poolAddresses.findIndex(addr => addr.toLowerCase() === poolAddress.toLowerCase());
-        console.log('Pool index:', poolIndex);
         return poolIndex !== -1 ? pools[poolIndex] : null;
     }, [pools, poolAddresses]);
 
     // Check if pool exists
     const checkPoolExists = useCallback((loanToken: Address, collateralToken: Address) => {
-        console.log('Checking if pool exists for:', loanToken, collateralToken);
         const exists = pools.some(pool =>
             pool.loanToken.toLowerCase() === loanToken.toLowerCase() &&
             pool.collateralToken.toLowerCase() === collateralToken.toLowerCase()
         );
-        console.log('Pool exists:', exists);
         return exists;
     }, [pools]);
-
-    // Debug logging
-    useEffect(() => {
-        console.log('=== LENDING POOL FACTORY STATE ===');
-        console.log('Pools:', pools);
-        console.log('Pool Addresses:', poolAddresses);
-        console.log('Is Loading:', isLoading);
-        console.log('Error:', error);
-        console.log('Last Refreshed:', lastRefreshed);
-        console.log('===============================');
-    }, [pools, poolAddresses, isLoading, error, lastRefreshed]);
 
     return {
         pools,
