@@ -61,6 +61,8 @@ export const ConnectButton: FC = () => {
                             alt={chain.name ?? 'Chain icon'}
                             src={chain.iconUrl}
                             style={{ width: '20px', height: '20px' }}
+                            width={20}
+                            height={20}
                           />
                         )}
                       </div>
