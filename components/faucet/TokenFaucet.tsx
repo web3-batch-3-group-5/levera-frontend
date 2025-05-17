@@ -52,7 +52,7 @@ const tokenFaucetABI = [
   },
 ];
 
-// Token addresses on Educhain testnet
+// Token addresses on Base Sepolia testnet
 const TOKEN_LIST = [
   {
     address: '0x74B59C6C38AEA54644527aA0c5f8f4796e777533' as Address,
@@ -406,7 +406,7 @@ export function TokenFaucet() {
 
   return (
     <div className='bg-card rounded-lg border p-6 shadow-sm'>
-      <h2 className='text-2xl font-bold mb-6'>Educhain Token Faucet</h2>
+      <h2 className='text-2xl font-bold mb-6'>Levera Token Faucet</h2>
 
       <p className='text-muted-foreground mb-6'>
         Select a token and amount to mint test tokens for the Levera platform.
@@ -532,7 +532,7 @@ export function TokenFaucet() {
 
       <div className='mt-6 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg'>
         <p className='text-sm text-blue-700 dark:text-blue-300'>
-          Note: These tokens are for testing purposes only on the Educhain
+          Note: These tokens are for testing purposes only on the Base Sepolia
           testnet. To add a token to your wallet, copy the token address and
           import it as a custom token.
         </p>

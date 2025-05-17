@@ -247,7 +247,7 @@ export default function ClosePositionPage() {
                         <div className="flex items-center justify-between pt-2 text-sm text-muted-foreground">
                             <span>Transaction:</span>
                             <a 
-                                href={`https://sepolia.arbiscan.io/tx/${txHash}`} 
+                                href={`https://sepolia.basescan.io/tx/${txHash}`} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="flex items-center gap-1 text-primary hover:underline"

@@ -6,13 +6,12 @@ import {
   http,
 } from 'viem';
 import { LRUCache as LRU } from 'lru-cache';
-import { eduChainTestnet, arbitrumSepolia } from '@/lib/chains';
+import { baseSepolia } from '@/lib/chains';
 
 // Helper to get chain configuration
 const getChainConfig = (chainId: number) => {
   switch (chainId) {
-    case eduChainTestnet.id: return eduChainTestnet;
-    case arbitrumSepolia.id: return arbitrumSepolia;
+    case baseSepolia.id: return baseSepolia;
     default: throw new Error('Unsupported chain');
   }
 };
@@ -143,9 +142,3 @@ export function formatTokenAmount(
     return '0.00';
   }
 }
-
-// Example usage:
-// formatTokenAmount(1234567890000000000n, { 
-//   chainId: eduChainTestnet.id,
-//   tokenAddress: '0x...'
-// });

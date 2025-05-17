@@ -1,5 +1,5 @@
 import { http, createConfig } from 'wagmi'
-import { arbitrumSepolia, eduChainTestnet } from '@/lib/chains'
+import { baseSepolia } from 'wagmi/chains'
 import { injected, walletConnect } from 'wagmi/connectors'
 
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
@@ -7,10 +7,9 @@ const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID
 if (!projectId) throw new Error('WalletConnect project ID is not defined')
 
 export const config = createConfig({
-    chains: [eduChainTestnet, arbitrumSepolia],
+    chains: [baseSepolia],
     transports: {
-        [eduChainTestnet.id]: http(eduChainTestnet.rpcUrls.default.http[0]),
-        [arbitrumSepolia.id]: http(arbitrumSepolia.rpcUrls.default.http[0]),
+        [baseSepolia.id]: http(baseSepolia.rpcUrls.default.http[0]),
     },
     connectors: [
         injected(),

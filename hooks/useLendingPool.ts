@@ -6,7 +6,7 @@ import {
   useWriteContract, 
   useAccount 
 } from 'wagmi';
-import { Address, zeroAddress } from 'viem';
+import { Address } from 'viem';
 import { lendingPoolABI } from '@/lib/abis/lendingPool';
 
 type ContractDataResult = {

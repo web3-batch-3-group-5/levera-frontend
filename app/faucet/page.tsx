@@ -27,7 +27,7 @@ export default function FaucetPage() {
         <div className="max-w-2xl mx-auto">
           <h1 className="text-3xl font-bold mb-6">Levera Test Tokens</h1>
           <p className="text-muted-foreground mb-8">
-            Get test tokens to try out the Levera platform on Educhain testnet.
+            Get test tokens to try out the Levera platform on Base Sepolia testnet.
           </p>
           
           <Suspense fallback={

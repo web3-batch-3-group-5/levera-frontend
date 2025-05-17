@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useReadContracts, useWriteContract } from 'wagmi';
 import { CONTRACTS, PoolDetails, PositionType } from '@/config/contracts';
 import { Address, parseUnits, erc20Abi } from 'viem';

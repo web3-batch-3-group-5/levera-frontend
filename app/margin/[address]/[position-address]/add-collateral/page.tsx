@@ -487,7 +487,7 @@ export default function AddCollateralPage() {
                         <div className="text-center text-sm text-muted-foreground">
                             <p className="mb-1">Transaction submitted</p>
                             <a 
-                                href={`https://sepolia.arbiscan.io/tx/${txHash}`} 
+                                href={`https://sepolia.basescan.io/tx/${txHash}`} 
                                 target="_blank" 
                                 rel="noopener noreferrer"
                                 className="text-primary hover:underline inline-flex items-center gap-1"
