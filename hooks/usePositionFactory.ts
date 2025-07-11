@@ -48,11 +48,7 @@ export function usePositionFactory() {
   // Note: Since we don't have a function to get all positions across all pools,
   // we'll just use a placeholder address for now - in a real app you'd need to
   // iterate through all known pools or use a subgraph
-  const {
-    data: positionAddresses,
-    isLoading: isLoadingAddresses,
-    refetch: refetchPositionAddresses,
-  } = useReadContract({
+  const { refetch: refetchPositionAddresses } = useReadContract({
     address: CONTRACTS.POSITION_FACTORY.address,
     abi: CONTRACTS.POSITION_FACTORY.abi,
     functionName: 'getPoolPositions',
