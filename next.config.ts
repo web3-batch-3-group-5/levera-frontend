@@ -1,4 +1,4 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   images: {
@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/static-gravity/image/**',
         search: '',
-      }
+      },
     ],
   },
   /* config options here */

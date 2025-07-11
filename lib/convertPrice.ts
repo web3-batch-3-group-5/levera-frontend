@@ -1,7 +1,7 @@
-import BigNumber from "bignumber.js";
-import { createPublicClient, http } from "viem";
-import { sepolia } from "wagmi/chains";
-import AggregatorV3InterfaceABI from "@chainlink/contracts/abi/v0.8/AggregatorV3Interface.json";
+import BigNumber from 'bignumber.js';
+import { createPublicClient, http } from 'viem';
+import { sepolia } from 'wagmi/chains';
+import AggregatorV3InterfaceABI from '@chainlink/contracts/abi/v0.8/AggregatorV3Interface.json';
 
 // const publicClient = createPublicClient({
 //   chain: sepolia,
@@ -10,11 +10,11 @@ import AggregatorV3InterfaceABI from "@chainlink/contracts/abi/v0.8/AggregatorV3
 
 // temporary price converter
 const priceConverter: { [key: string]: number } = {
-  'laUSDC': 1,
-  'laUSDT': 1,
-  'laDAI': 1,
-  'laWETH': 2500,
-  'laWBTC': 100_000,
+  laUSDC: 1,
+  laUSDT: 1,
+  laDAI: 1,
+  laWETH: 2500,
+  laWBTC: 100_000,
 };
 
 const publicClient = createPublicClient({
@@ -23,17 +23,17 @@ const publicClient = createPublicClient({
 });
 
 export function convertPrice(tokenSymbolIn: string, tokenSymbolOut: string, amount: number): number {
-  return priceConverter[tokenSymbolOut] * amount / priceConverter[tokenSymbolIn];
+  return (priceConverter[tokenSymbolOut] * amount) / priceConverter[tokenSymbolIn];
 }
 
 export async function getPrice(token: string): Promise<{ price: BigNumber; decimals: number }> {
-  if (token === "USD" || token === "USDC") return { price: new BigNumber(1), decimals: 8 };
+  if (token === 'USD' || token === 'USDC') return { price: new BigNumber(1), decimals: 8 };
   try {
-    const data = await publicClient.readContract({
+    const data = (await publicClient.readContract({
       address: token as `0x${string}`,
       abi: AggregatorV3InterfaceABI,
-      functionName: "latestRoundData",
-    }) as [bigint, bigint, bigint, bigint, bigint];
+      functionName: 'latestRoundData',
+    })) as [bigint, bigint, bigint, bigint, bigint];
 
     if (!data || data.length < 5) {
       throw new Error(`Invalid data received from Chainlink for ${token}`);

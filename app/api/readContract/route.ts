@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
     if (!address || !abi || !functionName) {
       return NextResponse.json(
         { error: 'Missing required parameters: address, abi, or functionName' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -32,10 +32,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ result });
   } catch (error) {
     console.error('Error reading contract:', error);
-    
+
     return NextResponse.json(
       { error: 'Failed to read contract', details: error instanceof Error ? error.message : 'Unknown error' },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

@@ -35,28 +35,24 @@ export function ThemeProvider({
   useEffect(() => {
     setMounted(true);
     const savedTheme = localStorage.getItem(storageKey) as Theme | null;
-    
+
     if (savedTheme) {
       setTheme(savedTheme);
     } else if (defaultTheme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       setTheme(systemTheme);
     }
   }, [storageKey, defaultTheme]);
 
   useEffect(() => {
     if (!mounted) return;
-    
+
     const root = window.document.documentElement;
-    
+
     root.classList.remove('light', 'dark');
-    
+
     if (theme === 'system') {
-      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
+      const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
       root.classList.add(systemTheme);
     } else {
       root.classList.add(theme);
@@ -66,9 +62,9 @@ export function ThemeProvider({
   // Update theme when system preference changes
   useEffect(() => {
     if (!mounted) return;
-    
+
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    
+
     const handleChange = () => {
       if (theme === 'system') {
         const root = window.document.documentElement;
@@ -76,7 +72,7 @@ export function ThemeProvider({
         root.classList.add(mediaQuery.matches ? 'dark' : 'light');
       }
     };
-    
+
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, [theme, mounted]);
@@ -98,9 +94,8 @@ export function ThemeProvider({
 
 export const useTheme = () => {
   const context = useContext(ThemeProviderContext);
-  
-  if (context === undefined)
-    throw new Error('useTheme must be used within a ThemeProvider');
-  
+
+  if (context === undefined) throw new Error('useTheme must be used within a ThemeProvider');
+
   return context;
 };

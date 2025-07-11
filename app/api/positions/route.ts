@@ -9,7 +9,7 @@ type CachedRateLimit = {
   id: string;
   address: `0x${string}`;
   lendingPoolAddress: `0x${string}`;
-}
+};
 
 // Configure rateLimiter cache (15s TTL, max 100 entries)
 const rateLimiter = new LRU<string, CachedRateLimit[]>({
@@ -23,9 +23,12 @@ const requestQueue = new Map<string, Promise<NextResponse<CachedRateLimit[]>>>()
 // Helper to get chain configuration
 const getChainConfig = (chainId: number) => {
   switch (chainId) {
-    case eduChainTestnet.id: return eduChainTestnet;
-    case arbitrumSepolia.id: return arbitrumSepolia;
-    default: throw new Error('Unsupported chain');
+    case eduChainTestnet.id:
+      return eduChainTestnet;
+    case arbitrumSepolia.id:
+      return arbitrumSepolia;
+    default:
+      throw new Error('Unsupported chain');
   }
 };
 
@@ -40,13 +43,13 @@ export async function GET(request: NextRequest) {
     if (!chainId || !poolAddress || !userAddress) {
       return NextResponse.json(
         { error: 'Missing required parameters: chainId, poolAddress, userAddress' },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     // Create cache key
     const cacheKey = `${chainId}-${poolAddress}-${userAddress}`;
-    
+
     // Check cache first
     const cached = rateLimiter.get(cacheKey);
     if (cached) {
@@ -67,7 +70,7 @@ export async function GET(request: NextRequest) {
         const rateLimit = {
           remaining: 100,
           limit: 100,
-          reset: Date.now() + 60_000
+          reset: Date.now() + 60_000,
         };
 
         // Create client with timeout
@@ -75,17 +78,17 @@ export async function GET(request: NextRequest) {
           chain,
           transport: http(chain.rpcUrls.default.http[0], {
             timeout: 10_000,
-            retryCount: 2
+            retryCount: 2,
           }),
         });
 
         // Fetch positions
-        const positionAddresses = await client.readContract({
+        const positionAddresses = (await client.readContract({
           address: CONTRACTS.POSITION_FACTORY.address,
           abi: positionFactoryABI,
           functionName: 'getPoolPositions',
           args: [userAddress, poolAddress],
-        }) as Address[];
+        })) as Address[];
 
         // Cache successful responses
         const responseData = positionAddresses.map((address, index) => ({
@@ -94,13 +97,13 @@ export async function GET(request: NextRequest) {
           lendingPoolAddress: poolAddress,
         }));
         rateLimiter.set(cacheKey, responseData);
-        
+
         return NextResponse.json(responseData, {
           headers: {
             'X-RateLimit-Limit': `${rateLimit.limit}`,
             'X-RateLimit-Remaining': `${rateLimit.remaining}`,
-            'X-RateLimit-Reset': `${rateLimit.reset}`
-          }
+            'X-RateLimit-Reset': `${rateLimit.reset}`,
+          },
         });
       } finally {
         requestQueue.delete(cacheKey);
@@ -112,11 +115,11 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching positions:', error);
     return NextResponse.json(
-      { 
+      {
         error: 'Failed to fetch positions',
-        details: error instanceof Error ? error.message : 'Unknown error'
+        details: error instanceof Error ? error.message : 'Unknown error',
       },
-      { status: error instanceof Error && error.message.includes('Unsupported') ? 400 : 500 }
+      { status: error instanceof Error && error.message.includes('Unsupported') ? 400 : 500 },
     );
   }
 }

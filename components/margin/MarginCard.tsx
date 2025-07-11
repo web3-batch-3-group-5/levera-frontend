@@ -4,15 +4,7 @@ import { useRouter } from 'next/navigation';
 import { usePosition } from '@/hooks/usePosition';
 import { Button } from '@/components/shared/Button';
 import { formatAddress } from '@/lib/utils';
-import {
-  Activity,
-  TrendingUp,
-  AlertCircle,
-  ArrowDownCircle,
-  ArrowUpCircle,
-  Info,
-  Scale,
-} from 'lucide-react';
+import { Activity, TrendingUp, AlertCircle, ArrowDownCircle, ArrowUpCircle, Info, Scale } from 'lucide-react';
 import { useTokenMetadata } from '@/hooks/useTokenMetadata';
 
 interface MarginCardProps {
@@ -58,24 +50,14 @@ export function MarginCard({
   // Create formatted values for UI display
   const formattedValues = {
     baseCollateral: baseCollateral
-      ? formatUnits(
-          baseCollateral,
-          tokenMetadata[collateralTokenSymbol || '']?.decimals
-        )
+      ? formatUnits(baseCollateral, tokenMetadata[collateralTokenSymbol || '']?.decimals)
       : '0',
     effectiveCollateral: effectiveCollateral
-      ? formatUnits(
-          effectiveCollateral,
-          tokenMetadata[collateralTokenSymbol || '']?.decimals
-        )
+      ? formatUnits(effectiveCollateral, tokenMetadata[collateralTokenSymbol || '']?.decimals)
       : '0',
-    borrowShares: borrowShares
-      ? formatUnits(borrowShares, tokenMetadata[loanTokenSymbol]?.decimals)
-      : '0',
+    borrowShares: borrowShares ? formatUnits(borrowShares, tokenMetadata[loanTokenSymbol]?.decimals) : '0',
     leverage: leverage ? Number(leverage) / 100 : 1, // Convert from basis points to decimal
-    liquidationPrice: liquidationPrice
-      ? formatUnits(liquidationPrice, tokenMetadata[loanTokenSymbol]?.decimals)
-      : '0',
+    liquidationPrice: liquidationPrice ? formatUnits(liquidationPrice, tokenMetadata[loanTokenSymbol]?.decimals) : '0',
     health: health ? (Number(health) / 100).toFixed(2) : '0.00', // Assuming health is in basis points
     ltv: ltv ? Number(ltv) / 10000 : 0, // Assuming LTV is in basis points
   };
@@ -112,23 +94,17 @@ export function MarginCard({
   // Action handlers with correct path structure
   const handleAddCollateral = (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(
-      `/margin/${lendingPoolAddress}/${positionAddress}/add-collateral`
-    );
+    router.push(`/margin/${lendingPoolAddress}/${positionAddress}/add-collateral`);
   };
 
   const handleAdjustLeverage = (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(
-      `/margin/${lendingPoolAddress}/${positionAddress}/adjust-leverage`
-    );
+    router.push(`/margin/${lendingPoolAddress}/${positionAddress}/adjust-leverage`);
   };
 
   const handleClosePosition = (e: React.MouseEvent) => {
     e.stopPropagation();
-    router.push(
-      `/margin/${lendingPoolAddress}/${positionAddress}/close-position`
-    );
+    router.push(`/margin/${lendingPoolAddress}/${positionAddress}/close-position`);
   };
 
   // Toggle expanded view
@@ -142,21 +118,16 @@ export function MarginCard({
     <div
       className={`px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 ${healthColor.replace(
         'text',
-        'bg'
+        'bg',
       )}-100 ${healthColor} dark:${healthColor.replace('text', 'bg')}-900/50`}
     >
-      <span
-        className={`size-1.5 rounded-full ${healthColor.replace('text', 'bg')}`}
-      ></span>
+      <span className={`size-1.5 rounded-full ${healthColor.replace('text', 'bg')}`}></span>
       {healthStatus}
     </div>
   );
 
   // Error state rendering
-  if (
-    positionError ||
-    (!isLoading && !isValidPosition && initialLoadComplete)
-  ) {
+  if (positionError || (!isLoading && !isValidPosition && initialLoadComplete)) {
     return (
       <div className='bg-card rounded-lg border shadow-sm hover:shadow-md transition-shadow'>
         <div className='p-6 space-y-4'>
@@ -165,30 +136,21 @@ export function MarginCard({
               <h3 className='text-lg font-semibold'>
                 {loanTokenSymbol}/{collateralTokenSymbol} Position
               </h3>
-              <p className='text-sm text-muted-foreground'>
-                Position ID: {formatAddress(positionAddress)}
-              </p>
+              <p className='text-sm text-muted-foreground'>Position ID: {formatAddress(positionAddress)}</p>
             </div>
           </div>
 
           <div className='flex items-center gap-2 text-destructive'>
             <AlertCircle className='size-4' />
-            <span className='text-sm'>
-              {positionError || 'Error loading position data'}
-            </span>
+            <span className='text-sm'>{positionError || 'Error loading position data'}</span>
           </div>
 
           <div className='flex gap-2'>
-            <Button
-              onClick={handleRetryLoad}
-              className='flex-1'
-              variant='outline'
-              size='sm'
-            >
+            <Button onClick={handleRetryLoad} className='flex-1' variant='outline' size='sm'>
               Retry Loading
             </Button>
             <Button
-              onClick={(e) => {
+              onClick={e => {
                 e.stopPropagation();
                 router.push(`/margin/${lendingPoolAddress}/${positionAddress}`);
               }}
@@ -241,9 +203,7 @@ export function MarginCard({
           <h3 className='text-lg font-semibold'>
             {loanTokenSymbol}/{collateralTokenSymbol} Position
           </h3>
-          <p className='text-sm text-muted-foreground'>
-            Position ID: {formatAddress(positionAddress)}
-          </p>
+          <p className='text-sm text-muted-foreground'>Position ID: {formatAddress(positionAddress)}</p>
         </div>
         <StatusBadge />
       </div>
@@ -272,9 +232,7 @@ export function MarginCard({
             <AlertCircle className='size-4' />
             Health Factor
           </p>
-          <p className={`font-medium ${healthColor}`}>
-            {formattedValues.health}
-          </p>
+          <p className={`font-medium ${healthColor}`}>{formattedValues.health}</p>
         </div>
 
         <div className='space-y-1'>
@@ -308,44 +266,25 @@ export function MarginCard({
 
         <div className='space-y-1'>
           <p className='text-sm text-muted-foreground'>LTV (Loan to Value)</p>
-          <p className='font-medium'>
-            {(formattedValues.ltv * 100).toFixed(2)}%
-          </p>
+          <p className='font-medium'>{(formattedValues.ltv * 100).toFixed(2)}%</p>
         </div>
 
         <div className='space-y-1'>
           <p className='text-sm text-muted-foreground'>Pool Address</p>
-          <p className='font-medium font-mono text-xs'>
-            {formatAddress(lendingPoolAddress)}
-          </p>
+          <p className='font-medium font-mono text-xs'>{formatAddress(lendingPoolAddress)}</p>
         </div>
       </div>
 
       <div className='flex gap-2 mt-4'>
-        <Button
-          className='flex-1'
-          variant='outline'
-          size='sm'
-          onClick={handleAddCollateral}
-        >
+        <Button className='flex-1' variant='outline' size='sm' onClick={handleAddCollateral}>
           <ArrowDownCircle className='size-4 mr-1' />
           Add Collateral
         </Button>
-        <Button
-          className='flex-1'
-          variant='outline'
-          size='sm'
-          onClick={handleAdjustLeverage}
-        >
+        <Button className='flex-1' variant='outline' size='sm' onClick={handleAdjustLeverage}>
           <TrendingUp className='size-4 mr-1' />
           Adjust Leverage
         </Button>
-        <Button
-          className='flex-1'
-          variant='secondary'
-          size='sm'
-          onClick={handleClosePosition}
-        >
+        <Button className='flex-1' variant='secondary' size='sm' onClick={handleClosePosition}>
           <ArrowUpCircle className='size-4 mr-1' />
           Close
         </Button>

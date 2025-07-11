@@ -1,19 +1,16 @@
-import { 
-  formatUnits, 
-  Address, 
-  erc20Abi, 
-  createPublicClient, 
-  http,
-} from 'viem';
+import { formatUnits, Address, erc20Abi, createPublicClient, http } from 'viem';
 import { LRUCache as LRU } from 'lru-cache';
 import { eduChainTestnet, arbitrumSepolia } from '@/lib/chains';
 
 // Helper to get chain configuration
 const getChainConfig = (chainId: number) => {
   switch (chainId) {
-    case eduChainTestnet.id: return eduChainTestnet;
-    case arbitrumSepolia.id: return arbitrumSepolia;
-    default: throw new Error('Unsupported chain');
+    case eduChainTestnet.id:
+      return eduChainTestnet;
+    case arbitrumSepolia.id:
+      return arbitrumSepolia;
+    default:
+      throw new Error('Unsupported chain');
   }
 };
 
@@ -22,7 +19,7 @@ const clientCache = new Map<number, ReturnType<typeof createPublicClient>>();
 const RPC_OPTIONS = {
   timeout: 10_000,
   retryCount: 3,
-  batch: { wait: 100 }
+  batch: { wait: 100 },
 };
 
 const getPublicClient = (chainId: number) => {
@@ -60,19 +57,16 @@ const tokenDecimalsCache = new LRU<string, number>({
   ttl: 3600_000, // 1 hour
 });
 
-async function fetchTokenDecimals(
-  tokenAddress: Address,
-  chainId: number
-): Promise<number> {
+async function fetchTokenDecimals(tokenAddress: Address, chainId: number): Promise<number> {
   const cacheKey = `${chainId}:${tokenAddress.toLowerCase()}`;
-  
+
   if (tokenDecimalsCache.has(cacheKey)) {
     return tokenDecimalsCache.get(cacheKey)!;
   }
 
   checkRateLimit(chainId);
   const client = getPublicClient(chainId);
-  
+
   try {
     const decimals = await client.readContract({
       address: tokenAddress,
@@ -97,7 +91,7 @@ export function formatTokenAmount(
     decimals?: number;
     minimumFractionDigits?: number;
     maximumFractionDigits?: number;
-  } = {}
+  } = {},
 ): string {
   if (!amount) return '0.00';
 
@@ -106,17 +100,17 @@ export function formatTokenAmount(
     tokenAddress,
     decimals: manualDecimals,
     minimumFractionDigits = 2,
-    maximumFractionDigits = 4
+    maximumFractionDigits = 4,
   } = options;
 
   let finalDecimals = manualDecimals ?? 18;
 
   if (tokenAddress) {
     if (!chainId) throw new Error('Chain ID required when using tokenAddress');
-    
+
     const cacheKey = `${chainId}:${tokenAddress.toLowerCase()}`;
     const cached = tokenDecimalsCache.get(cacheKey);
-    
+
     if (cached !== undefined) {
       finalDecimals = cached;
     } else {
@@ -132,11 +126,11 @@ export function formatTokenAmount(
   try {
     const formatted = formatUnits(amount, finalDecimals);
     const numeric = parseFloat(formatted);
-    
+
     return numeric.toLocaleString('en-US', {
       minimumFractionDigits,
       maximumFractionDigits,
-      useGrouping: true
+      useGrouping: true,
     });
   } catch (error) {
     console.error('Formatting error:', error);
@@ -145,7 +139,7 @@ export function formatTokenAmount(
 }
 
 // Example usage:
-// formatTokenAmount(1234567890000000000n, { 
+// formatTokenAmount(1234567890000000000n, {
 //   chainId: eduChainTestnet.id,
 //   tokenAddress: '0x...'
 // });

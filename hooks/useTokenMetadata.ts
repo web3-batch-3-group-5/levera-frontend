@@ -1,16 +1,16 @@
 'use client';
 
-import { useReadContracts } from 'wagmi'
-import { Address, erc20Abi } from 'viem'
+import { useReadContracts } from 'wagmi';
+import { Address, erc20Abi } from 'viem';
 import { CONTRACTS } from '@/config/contracts';
 import { useQueryClient } from '@tanstack/react-query';
 
 type TokenMetadata = {
-  address: Address
-  name: string
-  symbol: string
-  decimals: number
-}
+  address: Address;
+  name: string;
+  symbol: string;
+  decimals: number;
+};
 
 export function useTokenMetadata() {
   const queryClient = useQueryClient();
@@ -38,23 +38,25 @@ export function useTokenMetadata() {
       staleTime: 3600_000, // 1 hour
       gcTime: 24 * 3600_000, // 1 day
       // Memoized data transformation
-      select: (rawData) => {
-        return CONTRACTS.TOKEN_ADDRESSES.reduce((acc, address, index) => {
-          const startIdx = index * 3;
-          const [nameResult, symbolResult, decimalsResult] = 
-            rawData.slice(startIdx, startIdx + 3);
-          const symbol = symbolResult?.status === 'success' ? symbolResult.result as string : 'UNKNOWN';
+      select: rawData => {
+        return CONTRACTS.TOKEN_ADDRESSES.reduce(
+          (acc, address, index) => {
+            const startIdx = index * 3;
+            const [nameResult, symbolResult, decimalsResult] = rawData.slice(startIdx, startIdx + 3);
+            const symbol = symbolResult?.status === 'success' ? (symbolResult.result as string) : 'UNKNOWN';
 
-          acc[symbol] = {
-            name: nameResult?.status === 'success' ? nameResult.result as string : 'Unknown Token',
-            symbol,
-            address,
-            decimals: decimalsResult?.status === 'success' ? decimalsResult.result as number : 18,
-          };
-          return acc;
-        }, {} as Record<string, TokenMetadata>);
+            acc[symbol] = {
+              name: nameResult?.status === 'success' ? (nameResult.result as string) : 'Unknown Token',
+              symbol,
+              address,
+              decimals: decimalsResult?.status === 'success' ? (decimalsResult.result as number) : 18,
+            };
+            return acc;
+          },
+          {} as Record<string, TokenMetadata>,
+        );
       },
-    }
+    },
   });
 
   // Cache management utilities
@@ -66,9 +68,10 @@ export function useTokenMetadata() {
 
   const getCacheState = () => ({
     updatedAt: queryClient.getQueryState(['readContracts', CONTRACTS.TOKEN_ADDRESSES])?.dataUpdatedAt,
-    isStale: queryClient.isFetching({
-      queryKey: ['readContracts', CONTRACTS.TOKEN_ADDRESSES],
-    }) !== undefined,
+    isStale:
+      queryClient.isFetching({
+        queryKey: ['readContracts', CONTRACTS.TOKEN_ADDRESSES],
+      }) !== undefined,
   });
 
   return {

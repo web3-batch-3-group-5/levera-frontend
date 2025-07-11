@@ -1,11 +1,12 @@
-import { Address } from 'viem';
-import { formatAddress } from '@/lib/utils';
-import { PoolDetails } from '@/config/contracts';
-import { Activity, Scale, TrendingUp, Info, AlertTriangle } from 'lucide-react';
-import { useRouter } from 'next/navigation';
-import { useLendingPool } from '@/hooks/useLendingPool';
-import { Button } from '@/components/shared/Button';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Address } from 'viem';
+import { Activity, Scale, TrendingUp, Info, AlertTriangle } from 'lucide-react';
+
+import { Button } from '@/components/shared/Button';
+import { PoolDetails } from '@/types';
+import { useLendingPool } from '@/hooks/useLendingPool';
+import { formatAddress } from '@/lib/utils';
 import { formatTokenAmount } from '@/lib/utils/format';
 
 // Helper function to format percentage
@@ -29,16 +30,10 @@ export function PoolCard({ poolAddress, pool, onSupply }: PoolCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Fetch real pool data
-  const {
-    totalSupplyAssets,
-    totalBorrowAssets,
-    interestRate,
-    error: poolDataError,
-  } = useLendingPool(poolAddress);
+  const { totalSupplyAssets, totalBorrowAssets, interestRate, error: poolDataError } = useLendingPool(poolAddress);
 
   // Loading state derived from data availability
-  const isLoadingPoolData =
-    !totalSupplyAssets && !totalBorrowAssets && !interestRate && !poolDataError;
+  const isLoadingPoolData = !totalSupplyAssets && !totalBorrowAssets && !interestRate && !poolDataError;
 
   // Calculate utilization rate
   const utilizationRate =
@@ -47,9 +42,7 @@ export function PoolCard({ poolAddress, pool, onSupply }: PoolCardProps) {
       : 0;
 
   // Calculate supply APY - in a real implementation, this would use actual earnings data
-  const supplyAPY = interestRate
-    ? (Number(interestRate) / 100) * (utilizationRate / 100)
-    : 0;
+  const supplyAPY = interestRate ? (Number(interestRate) / 100) * (utilizationRate / 100) : 0;
 
   const handleClick = () => {
     router.push(`/pools/${poolAddress}`);
@@ -87,11 +80,7 @@ export function PoolCard({ poolAddress, pool, onSupply }: PoolCardProps) {
           : 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400'
       }`}
     >
-      <span
-        className={`size-1.5 rounded-full ${
-          pool.isActive ? 'bg-green-500' : 'bg-red-500'
-        }`}
-      />
+      <span className={`size-1.5 rounded-full ${pool.isActive ? 'bg-green-500' : 'bg-red-500'}`} />
       {pool.isActive ? 'Active' : 'Inactive'}
     </div>
   );
@@ -105,9 +94,7 @@ export function PoolCard({ poolAddress, pool, onSupply }: PoolCardProps) {
               <h3 className='text-lg font-semibold'>
                 {pool.loanTokenSymbol}/{pool.collateralTokenSymbol} Pool
               </h3>
-              <p className='text-sm text-muted-foreground'>
-                Pool ID: {formatAddress(poolAddress)}
-              </p>
+              <p className='text-sm text-muted-foreground'>Pool ID: {formatAddress(poolAddress)}</p>
             </div>
             <StatusBadge />
           </div>
@@ -118,7 +105,7 @@ export function PoolCard({ poolAddress, pool, onSupply }: PoolCardProps) {
           </div>
 
           <Button
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               router.push(`/pools/${poolAddress}`);
             }}
@@ -140,9 +127,7 @@ export function PoolCard({ poolAddress, pool, onSupply }: PoolCardProps) {
           <h3 className='text-lg font-semibold'>
             {pool.loanTokenSymbol}/{pool.collateralTokenSymbol} Pool
           </h3>
-          <p className='text-sm text-muted-foreground'>
-            Pool ID: {formatAddress(poolAddress)}
-          </p>
+          <p className='text-sm text-muted-foreground'>Pool ID: {formatAddress(poolAddress)}</p>
         </div>
         <StatusBadge />
       </div>
@@ -212,26 +197,19 @@ export function PoolCard({ poolAddress, pool, onSupply }: PoolCardProps) {
       <div className='grid grid-cols-2 gap-4 mb-4'>
         <div className='space-y-1'>
           <p className='text-sm text-muted-foreground'>Interest Rate</p>
-          <p className='font-medium'>
-            {interestRate ? Number(interestRate).toFixed(2) : '0.00'}%
-          </p>
+          <p className='font-medium'>{interestRate ? Number(interestRate).toFixed(2) : '0.00'}%</p>
         </div>
 
         <div className='space-y-1'>
           <p className='text-sm text-muted-foreground'>Liquidation Threshold</p>
           <p className='font-medium'>
-            {pool.liquidationThresholdPercentage
-              ? Number(pool.liquidationThresholdPercentage).toFixed(2)
-              : '0.00'}
-            %
+            {pool.liquidationThresholdPercentage ? Number(pool.liquidationThresholdPercentage).toFixed(2) : '0.00'}%
           </p>
         </div>
 
         <div className='space-y-1'>
           <p className='text-sm text-muted-foreground'>Position Type</p>
-          <p className='font-medium'>
-            {pool.positionType === 0 ? 'Long' : 'Short'}
-          </p>
+          <p className='font-medium'>{pool.positionType === 0 ? 'Long' : 'Short'}</p>
         </div>
 
         <div className='space-y-1'>
@@ -241,27 +219,13 @@ export function PoolCard({ poolAddress, pool, onSupply }: PoolCardProps) {
       </div>
 
       <div className='flex gap-2 mt-4'>
-        <Button
-          className='flex-1'
-          onClick={handleSupply}
-          disabled={!pool.isActive}
-        >
+        <Button className='flex-1' onClick={handleSupply} disabled={!pool.isActive}>
           Supply
         </Button>
-        <Button
-          className='flex-1'
-          variant='outline'
-          onClick={handleWithdraw}
-          disabled={!pool.isActive}
-        >
+        <Button className='flex-1' variant='outline' onClick={handleWithdraw} disabled={!pool.isActive}>
           Withdraw
         </Button>
-        <Button
-          className='flex-1'
-          variant='secondary'
-          onClick={handleTrade}
-          disabled={!pool.isActive}
-        >
+        <Button className='flex-1' variant='secondary' onClick={handleTrade} disabled={!pool.isActive}>
           Trade
         </Button>
       </div>
@@ -270,20 +234,10 @@ export function PoolCard({ poolAddress, pool, onSupply }: PoolCardProps) {
 
   const collapsedButtons = !isExpanded && (
     <div className='flex gap-2'>
-      <Button
-        variant='outline'
-        size='sm'
-        onClick={handleSupply}
-        disabled={!pool.isActive}
-      >
+      <Button variant='outline' size='sm' onClick={handleSupply} disabled={!pool.isActive}>
         Supply
       </Button>
-      <Button
-        variant='secondary'
-        size='sm'
-        onClick={handleTrade}
-        disabled={!pool.isActive}
-      >
+      <Button variant='secondary' size='sm' onClick={handleTrade} disabled={!pool.isActive}>
         Trade
       </Button>
     </div>

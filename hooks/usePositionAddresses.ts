@@ -27,22 +27,19 @@ export function usePositionAddresses(userAddress: Address | undefined, poolAddre
   const shouldFetch = isValidPoolAddress && isValidUserAddress;
 
   // Get all positions for the user and pool from the position factory
-  const { 
+  const {
     data: positions,
     isLoading: isLoadingPositions,
     error: positionsError,
-    refetch
+    refetch,
   } = useReadContract({
     address: CONTRACTS.POSITION_FACTORY.address,
     abi: positionFactoryABI,
     functionName: 'getPoolPositions',
-    args: [
-      userAddress || '0x0000000000000000000000000000000000000000' as Address, 
-      poolAddress
-    ],
+    args: [userAddress || ('0x0000000000000000000000000000000000000000' as Address), poolAddress],
     query: {
       enabled: shouldFetch,
-    }
+    },
   });
 
   // Process position addresses
@@ -76,7 +73,7 @@ export function usePositionAddresses(userAddress: Address | undefined, poolAddre
 
       // Filter out zero addresses
       const validAddresses = (positions as Address[]).filter(
-        addr => addr !== '0x0000000000000000000000000000000000000000'
+        addr => addr !== '0x0000000000000000000000000000000000000000',
       );
 
       console.log('Filtered Position Addresses:', validAddresses);
@@ -109,6 +106,6 @@ export function usePositionAddresses(userAddress: Address | undefined, poolAddre
     positionAddresses,
     isLoading,
     error,
-    refetch: refreshPositions
+    refetch: refreshPositions,
   };
 }

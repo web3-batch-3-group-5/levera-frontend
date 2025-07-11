@@ -2,11 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Address, parseUnits } from 'viem';
-import {
-  useAccount,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-} from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { Button } from '@/components/shared/Button';
 import { toast } from 'sonner';
 import { ChevronDown, Droplets, Copy, CheckCircle2 } from 'lucide-react';
@@ -104,19 +100,18 @@ export function TokenFaucet() {
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
 
   // Observe transaction receipt
-  const { isLoading: isConfirming, isSuccess: isConfirmed } =
-    useWaitForTransactionReceipt({ hash: txHash });
+  const { isLoading: isConfirming, isSuccess: isConfirmed } = useWaitForTransactionReceipt({ hash: txHash });
 
   // Initialize token data with loading states
   const [tokensData, setTokensData] = useState<TokenInfo[]>(
-    TOKEN_LIST.map((token) => ({
+    TOKEN_LIST.map(token => ({
       address: token.address,
       symbol: token.label,
       name: token.label,
       decimals: 18,
       balance: 0n,
       isLoading: true,
-    }))
+    })),
   );
 
   // Effect to fetch token data on component mount
@@ -133,34 +128,29 @@ export function TokenFaucet() {
           // Create a fetch request function that works with your environment
           const fetchData = async (functionName: string) => {
             // Use a basic fetch to your RPC endpoint
-            const response = await fetch(
-              'https://rpc.open-campus-codex.gelato.digital/',
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  jsonrpc: '2.0',
-                  id: 1,
-                  method: 'eth_call',
-                  params: [
-                    {
-                      to: token.address,
-                      data:
-                        functionName === 'symbol'
-                          ? '0x95d89b41'
-                          : functionName === 'decimals'
+            const response = await fetch('https://rpc.open-campus-codex.gelato.digital/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                id: 1,
+                method: 'eth_call',
+                params: [
+                  {
+                    to: token.address,
+                    data:
+                      functionName === 'symbol'
+                        ? '0x95d89b41'
+                        : functionName === 'decimals'
                           ? '0x313ce567'
                           : functionName === 'balanceOf'
-                          ? `0x70a08231000000000000000000000000${address?.slice(
-                              2
-                            )}`
-                          : '0x',
-                    },
-                    'latest',
-                  ],
-                }),
-              }
-            );
+                            ? `0x70a08231000000000000000000000000${address?.slice(2)}`
+                            : '0x',
+                  },
+                  'latest',
+                ],
+              }),
+            });
 
             const result = await response.json();
             if (result.error) throw new Error(result.error.message);
@@ -168,9 +158,7 @@ export function TokenFaucet() {
             if (functionName === 'symbol') {
               // Decode symbol (string)
               const hex = result.result.slice(130);
-              const symbol = Buffer.from(hex, 'hex')
-                .toString()
-                .replace(/\0/g, '');
+              const symbol = Buffer.from(hex, 'hex').toString().replace(/\0/g, '');
               return symbol || token.label;
             } else if (functionName === 'decimals') {
               // Decode decimals (uint8)
@@ -218,13 +206,10 @@ export function TokenFaucet() {
   const formatBalance = (token: TokenInfo | null) => {
     if (!token) return '0';
 
-    return (Number(token.balance) / 10 ** token.decimals).toLocaleString(
-      undefined,
-      {
-        minimumFractionDigits: 0,
-        maximumFractionDigits: 4,
-      }
-    );
+    return (Number(token.balance) / 10 ** token.decimals).toLocaleString(undefined, {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 4,
+    });
   };
 
   // Copy token address to clipboard
@@ -241,7 +226,7 @@ export function TokenFaucet() {
             setCopiedAddress(null);
           }, 5000);
         })
-        .catch((err) => {
+        .catch(err => {
           console.error('Failed to copy: ', err);
           toast.error('Failed to copy address');
         });
@@ -303,19 +288,19 @@ export function TokenFaucet() {
           gas: 15000000n,
         },
         {
-          onSuccess: (hash) => {
+          onSuccess: hash => {
             console.log('Mint transaction hash:', hash);
             setTxHash(hash);
             toast.dismiss(`faucet-request`);
             toast.loading('Transaction submitted...', { id: 'tx-pending' });
           },
-          onError: (error) => {
+          onError: error => {
             console.error('Mint error:', error);
             toast.dismiss(`faucet-request`);
             toast.error(`Failed to mint tokens: ${error.message}`);
             setIsPending(false);
           },
-        }
+        },
       );
     } catch (error) {
       console.error('Error in mint process:', error);
@@ -329,45 +314,36 @@ export function TokenFaucet() {
   useEffect(() => {
     if (isConfirmed && isPending) {
       toast.dismiss('tx-pending');
-      toast.success(
-        `${amount} ${
-          tokensData[selectedTokenIdx]?.symbol || 'tokens'
-        } received successfully!`
-      );
+      toast.success(`${amount} ${tokensData[selectedTokenIdx]?.symbol || 'tokens'} received successfully!`);
       setIsPending(false);
       setTxHash(undefined);
 
       // Refresh token data
       const refreshTokenData = async () => {
         try {
-          const response = await fetch(
-            'https://rpc.open-campus-codex.gelato.digital/',
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                jsonrpc: '2.0',
-                id: 1,
-                method: 'eth_call',
-                params: [
-                  {
-                    to: tokensData[selectedTokenIdx].address,
-                    data: `0x70a08231000000000000000000000000${address?.slice(
-                      2
-                    )}`,
-                  },
-                  'latest',
-                ],
-              }),
-            }
-          );
+          const response = await fetch('https://rpc.open-campus-codex.gelato.digital/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jsonrpc: '2.0',
+              id: 1,
+              method: 'eth_call',
+              params: [
+                {
+                  to: tokensData[selectedTokenIdx].address,
+                  data: `0x70a08231000000000000000000000000${address?.slice(2)}`,
+                },
+                'latest',
+              ],
+            }),
+          });
 
           const result = await response.json();
           if (result.error) throw new Error(result.error.message);
 
           const newBalance = BigInt(result.result || '0x0');
 
-          setTokensData((prev) => {
+          setTokensData(prev => {
             const updated = [...prev];
             updated[selectedTokenIdx] = {
               ...updated[selectedTokenIdx],
@@ -439,9 +415,7 @@ export function TokenFaucet() {
                   >
                     <span>{token.symbol}</span>
                     <span className='text-xs text-muted-foreground'>
-                      {token.isLoading
-                        ? 'Loading...'
-                        : `Balance: ${formatBalance(token)}`}
+                      {token.isLoading ? 'Loading...' : `Balance: ${formatBalance(token)}`}
                     </span>
                   </button>
                 ))}
@@ -454,9 +428,7 @@ export function TokenFaucet() {
         <div className='p-3 bg-muted/30 rounded-lg border'>
           <div className='flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2'>
             <div>
-              <div className='text-xs font-mono break-all'>
-                {selectedToken.address}
-              </div>
+              <div className='text-xs font-mono break-all'>{selectedToken.address}</div>
             </div>
             <Button
               variant='outline'
@@ -487,25 +459,19 @@ export function TokenFaucet() {
               type='number'
               className='flex-1 p-3 bg-background border rounded-l-md'
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={e => setAmount(e.target.value)}
               min='1'
             />
-            <div className='px-3 py-3 bg-muted border-y border-r rounded-r-md'>
-              {selectedToken.symbol}
-            </div>
+            <div className='px-3 py-3 bg-muted border-y border-r rounded-r-md'>{selectedToken.symbol}</div>
           </div>
         </div>
 
         {/* Current Balance */}
         <div className='p-4 bg-muted/30 rounded-lg border'>
           <div className='flex justify-between'>
-            <span className='text-sm text-muted-foreground'>
-              Current Balance:
-            </span>
+            <span className='text-sm text-muted-foreground'>Current Balance:</span>
             <span className='font-medium'>
-              {selectedToken.isLoading
-                ? 'Loading...'
-                : `${formatBalance(selectedToken)} ${selectedToken.symbol}`}
+              {selectedToken.isLoading ? 'Loading...' : `${formatBalance(selectedToken)} ${selectedToken.symbol}`}
             </span>
           </div>
         </div>
@@ -513,28 +479,19 @@ export function TokenFaucet() {
         {/* Request Button */}
         <Button
           onClick={requestTokens}
-          disabled={
-            !isConnected ||
-            selectedToken.isLoading ||
-            isPending ||
-            isConfirming ||
-            Number(amount) <= 0
-          }
+          disabled={!isConnected || selectedToken.isLoading || isPending || isConfirming || Number(amount) <= 0}
           className='w-full'
           size='lg'
         >
           <Droplets className='size-4 mr-2' />
-          {isPending || isConfirming
-            ? 'Requesting...'
-            : `Get ${amount} ${selectedToken.symbol}`}
+          {isPending || isConfirming ? 'Requesting...' : `Get ${amount} ${selectedToken.symbol}`}
         </Button>
       </div>
 
       <div className='mt-6 p-3 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg'>
         <p className='text-sm text-blue-700 dark:text-blue-300'>
-          Note: These tokens are for testing purposes only on the Educhain
-          testnet. To add a token to your wallet, copy the token address and
-          import it as a custom token.
+          Note: These tokens are for testing purposes only on the Educhain testnet. To add a token to your wallet, copy
+          the token address and import it as a custom token.
         </p>
       </div>
     </div>

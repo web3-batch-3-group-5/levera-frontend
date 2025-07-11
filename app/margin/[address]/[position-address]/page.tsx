@@ -4,13 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Address, formatUnits, isAddress } from 'viem';
 import { Button } from '@/components/shared/Button';
-import {
-  ArrowLeft,
-  TrendingUp,
-  AlertTriangle,
-  ArrowDownCircle,
-  ArrowUpCircle,
-} from 'lucide-react';
+import { ArrowLeft, TrendingUp, AlertTriangle, ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 import { usePosition } from '@/hooks/usePosition';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
 import { useTokenMetadata } from '@/hooks/useTokenMetadata';
@@ -35,11 +29,7 @@ export default function PositionDetailsPage() {
   let positionAddress: Address | undefined;
 
   // Handle TypeScript type safety for Address
-  if (
-    params &&
-    typeof params.address === 'string' &&
-    isAddress(params.address)
-  ) {
+  if (params && typeof params.address === 'string' && isAddress(params.address)) {
     poolAddress = params.address as Address;
   } else {
     // Default to a zero address if invalid
@@ -48,25 +38,16 @@ export default function PositionDetailsPage() {
   }
 
   // Fix: Use "position-address" instead of "positionAddress"
-  if (
-    params &&
-    typeof params['position-address'] === 'string' &&
-    isAddress(params['position-address'])
-  ) {
+  if (params && typeof params['position-address'] === 'string' && isAddress(params['position-address'])) {
     positionAddress = params['position-address'] as Address;
   } else {
-    console.error(
-      'Invalid position address in params:',
-      params?.['position-address']
-    );
+    console.error('Invalid position address in params:', params?.['position-address']);
   }
 
   // Get pool data
   const { poolAddresses, pools } = useLendingPoolFactory();
   const { data: tokenMetadata } = useTokenMetadata();
-  const poolIndex = poolAddresses.findIndex(
-    (addr) => addr.toLowerCase() === poolAddress.toLowerCase()
-  );
+  const poolIndex = poolAddresses.findIndex(addr => addr.toLowerCase() === poolAddress.toLowerCase());
   const pool = poolIndex !== -1 ? pools[poolIndex] : undefined;
 
   // Get position data with our improved hook - only fetch if position address is valid
@@ -89,35 +70,19 @@ export default function PositionDetailsPage() {
   // Create formatted values for UI display
   const formattedValues = {
     baseCollateral: baseCollateral
-      ? formatUnits(
-          baseCollateral,
-          tokenMetadata[pool?.collateralTokenSymbol || '']?.decimals
-        )
+      ? formatUnits(baseCollateral, tokenMetadata[pool?.collateralTokenSymbol || '']?.decimals)
       : '0',
     effectiveCollateral: effectiveCollateral
-      ? formatUnits(
-          effectiveCollateral,
-          tokenMetadata[pool?.collateralTokenSymbol || '']?.decimals
-        )
+      ? formatUnits(effectiveCollateral, tokenMetadata[pool?.collateralTokenSymbol || '']?.decimals)
       : '0',
-    borrowShares: borrowShares
-      ? formatUnits(
-          borrowShares,
-          tokenMetadata[pool?.loanTokenSymbol || '']?.decimals
-        )
-      : '0',
+    borrowShares: borrowShares ? formatUnits(borrowShares, tokenMetadata[pool?.loanTokenSymbol || '']?.decimals) : '0',
     leverage: leverage ? Number(leverage) / 100 : 1, // Convert from basis points to decimal
     liquidationPrice: liquidationPrice
-      ? formatUnits(
-          liquidationPrice,
-          tokenMetadata[pool?.loanTokenSymbol || '']?.decimals
-        )
+      ? formatUnits(liquidationPrice, tokenMetadata[pool?.loanTokenSymbol || '']?.decimals)
       : '0',
     health: health ? (Number(health) / 100).toFixed(2) : '0.00', // Assuming health is in basis points
     ltv: ltv ? Number(ltv) / 10000 : 0, // Assuming LTV is in basis points
-    lastUpdated: lastUpdated
-      ? new Date(Number(lastUpdated) * 1000)
-      : new Date(),
+    lastUpdated: lastUpdated ? new Date(Number(lastUpdated) * 1000) : new Date(),
   };
 
   // Handle position actions - also fix the URL paths here
@@ -144,11 +109,7 @@ export default function PositionDetailsPage() {
   if (!positionAddress || !isValidPosition) {
     return (
       <div className='container mx-auto px-4 py-8'>
-        <Button
-          variant='ghost'
-          className='mb-6'
-          onClick={() => router.push('/margin')}
-        >
+        <Button variant='ghost' className='mb-6' onClick={() => router.push('/margin')}>
           <ArrowLeft className='size-4 mr-2' />
           Back to Margin Trading
         </Button>
@@ -159,20 +120,15 @@ export default function PositionDetailsPage() {
               <AlertTriangle className='size-10 text-destructive mx-auto mb-4' />
               <h3 className='text-xl font-bold mb-2'>Invalid Position</h3>
               <p className='text-muted-foreground mb-6'>
-                The position address appears to be invalid or cannot be
-                processed.
+                The position address appears to be invalid or cannot be processed.
                 <br />
                 <code className='block mt-2 p-2 bg-muted rounded text-xs'>
-                  Raw Position Address:{' '}
-                  {params?.['position-address']?.toString() || 'undefined'}
+                  Raw Position Address: {params?.['position-address']?.toString() || 'undefined'}
                 </code>
               </p>
 
               <div className='flex justify-center gap-3'>
-                <Button
-                  variant='outline'
-                  onClick={() => router.push(`/margin/${poolAddress}`)}
-                >
+                <Button variant='outline' onClick={() => router.push(`/margin/${poolAddress}`)}>
                   Back to Pool
                 </Button>
               </div>
@@ -186,20 +142,14 @@ export default function PositionDetailsPage() {
   if (isLoading) {
     return (
       <div className='container mx-auto px-4 py-8'>
-        <Button
-          variant='ghost'
-          className='mb-6'
-          onClick={() => router.push('/margin')}
-        >
+        <Button variant='ghost' className='mb-6' onClick={() => router.push('/margin')}>
           <ArrowLeft className='size-4 mr-2' />
           Back to Margin Trading
         </Button>
 
         <div className='max-w-full mx-auto'>
           <div className='text-center'>
-            <h2 className='text-xl font-semibold mb-4'>
-              Loading Position Data...
-            </h2>
+            <h2 className='text-xl font-semibold mb-4'>Loading Position Data...</h2>
             <div className='size-12 border-4 border-t-primary border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin mx-auto'></div>
           </div>
         </div>
@@ -210,11 +160,7 @@ export default function PositionDetailsPage() {
   if (error) {
     return (
       <div className='container mx-auto px-4 py-8'>
-        <Button
-          variant='ghost'
-          className='mb-6'
-          onClick={() => router.push('/margin')}
-        >
+        <Button variant='ghost' className='mb-6' onClick={() => router.push('/margin')}>
           <ArrowLeft className='size-4 mr-2' />
           Back to Margin Trading
         </Button>
@@ -224,15 +170,10 @@ export default function PositionDetailsPage() {
             <div className='text-center py-8'>
               <AlertTriangle className='size-10 text-destructive mx-auto mb-4' />
               <h3 className='text-xl font-bold mb-2'>Error Loading Position</h3>
-              <p className='text-muted-foreground mb-6'>
-                {error || 'Failed to load position data'}
-              </p>
+              <p className='text-muted-foreground mb-6'>{error || 'Failed to load position data'}</p>
 
               <div className='flex justify-center gap-3'>
-                <Button
-                  variant='outline'
-                  onClick={() => router.push('/margin')}
-                >
+                <Button variant='outline' onClick={() => router.push('/margin')}>
                   Go Back
                 </Button>
                 <Button onClick={() => refreshPosition()}>Try Again</Button>
@@ -247,10 +188,7 @@ export default function PositionDetailsPage() {
   return (
     <main className='container mx-auto px-4 py-8'>
       <div className='flex justify-between items-center mb-6'>
-        <Button
-          variant='ghost'
-          onClick={() => router.push(`/margin/${poolAddress}`)}
-        >
+        <Button variant='ghost' onClick={() => router.push(`/margin/${poolAddress}`)}>
           <ArrowLeft className='size-4 mr-2' />
           Back to Pool
         </Button>
@@ -262,36 +200,19 @@ export default function PositionDetailsPage() {
             <h1 className='text-3xl font-bold mb-1'>
               {pool?.loanTokenSymbol}/{pool?.collateralTokenSymbol} Position
             </h1>
-            <p className='text-sm text-muted-foreground'>
-              Position ID: {formatAddress(positionAddress)}
-            </p>
+            <p className='text-sm text-muted-foreground'>Position ID: {formatAddress(positionAddress)}</p>
           </div>
 
           <div className='flex gap-2'>
-            <Button
-              variant='outline'
-              size='sm'
-              className='gap-1'
-              onClick={handleAddCollateral}
-            >
+            <Button variant='outline' size='sm' className='gap-1' onClick={handleAddCollateral}>
               <ArrowDownCircle className='size-3.5' />
               Add Collateral
             </Button>
-            <Button
-              variant='outline'
-              size='sm'
-              className='gap-1'
-              onClick={handleAdjustLeverage}
-            >
+            <Button variant='outline' size='sm' className='gap-1' onClick={handleAdjustLeverage}>
               <TrendingUp className='size-3.5' />
               Adjust Leverage
             </Button>
-            <Button
-              variant='secondary'
-              size='sm'
-              className='gap-1'
-              onClick={handleClosePosition}
-            >
+            <Button variant='secondary' size='sm' className='gap-1' onClick={handleClosePosition}>
               <ArrowUpCircle className='size-3.5' />
               Close Position
             </Button>
@@ -301,28 +222,21 @@ export default function PositionDetailsPage() {
         {/* Position Stats */}
         <div className='grid grid-cols-1 md:grid-cols-3 gap-4 my-6'>
           <div className='bg-muted/50 p-4 rounded-lg border'>
-            <p className='text-sm text-muted-foreground mb-1'>
-              Base Collateral
-            </p>
+            <p className='text-sm text-muted-foreground mb-1'>Base Collateral</p>
             <p className='text-xl font-semibold'>
               {formattedValues.baseCollateral} {pool?.collateralTokenSymbol}
             </p>
           </div>
 
           <div className='bg-muted/50 p-4 rounded-lg border'>
-            <p className='text-sm text-muted-foreground mb-1'>
-              Effective Collateral
-            </p>
+            <p className='text-sm text-muted-foreground mb-1'>Effective Collateral</p>
             <p className='text-xl font-semibold'>
-              {formattedValues.effectiveCollateral}{' '}
-              {pool?.collateralTokenSymbol}
+              {formattedValues.effectiveCollateral} {pool?.collateralTokenSymbol}
             </p>
           </div>
 
           <div className='bg-muted/50 p-4 rounded-lg border'>
-            <p className='text-sm text-muted-foreground mb-1'>
-              Borrowed Amount
-            </p>
+            <p className='text-sm text-muted-foreground mb-1'>Borrowed Amount</p>
             <p className='text-xl font-semibold'>
               {formattedValues.borrowShares} {pool?.loanTokenSymbol}
             </p>
@@ -337,12 +251,8 @@ export default function PositionDetailsPage() {
           </div>
 
           <div className='p-4 bg-muted/30 rounded-lg border'>
-            <p className='text-sm text-muted-foreground mb-1'>
-              Liquidation Price
-            </p>
-            <p className='text-lg font-semibold'>
-              ${formattedValues.liquidationPrice}
-            </p>
+            <p className='text-sm text-muted-foreground mb-1'>Liquidation Price</p>
+            <p className='text-lg font-semibold'>${formattedValues.liquidationPrice}</p>
           </div>
 
           <div className='p-4 bg-muted/30 rounded-lg border'>
@@ -352,8 +262,8 @@ export default function PositionDetailsPage() {
                 Number(formattedValues.health) < 1.1
                   ? 'text-red-500'
                   : Number(formattedValues.health) < 1.3
-                  ? 'text-yellow-500'
-                  : 'text-green-500'
+                    ? 'text-yellow-500'
+                    : 'text-green-500'
               }`}
             >
               {formattedValues.health}
@@ -361,12 +271,8 @@ export default function PositionDetailsPage() {
           </div>
 
           <div className='p-4 bg-muted/30 rounded-lg border'>
-            <p className='text-sm text-muted-foreground mb-1'>
-              LTV (Loan to Value)
-            </p>
-            <p className='text-lg font-semibold'>
-              {(formattedValues.ltv * 100).toFixed(2)}%
-            </p>
+            <p className='text-sm text-muted-foreground mb-1'>LTV (Loan to Value)</p>
+            <p className='text-lg font-semibold'>{(formattedValues.ltv * 100).toFixed(2)}%</p>
           </div>
         </div>
 
@@ -375,13 +281,10 @@ export default function PositionDetailsPage() {
           <div className='mt-6 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4 flex items-start gap-3'>
             <AlertTriangle className='size-5 text-amber-500 flex-shrink-0 mt-0.5' />
             <div>
-              <p className='font-medium text-amber-800 dark:text-amber-300'>
-                Position at risk
-              </p>
+              <p className='font-medium text-amber-800 dark:text-amber-300'>Position at risk</p>
               <p className='text-sm text-amber-700 dark:text-amber-400'>
-                This position has a low health factor and may be at risk of
-                liquidation. Consider adding more collateral or reducing
-                leverage.
+                This position has a low health factor and may be at risk of liquidation. Consider adding more collateral
+                or reducing leverage.
               </p>
             </div>
           </div>
@@ -389,29 +292,17 @@ export default function PositionDetailsPage() {
 
         {/* Action Buttons */}
         <div className='mt-6 grid grid-cols-1 md:grid-cols-3 gap-4'>
-          <Button
-            variant='outline'
-            className='gap-2'
-            onClick={handleAddCollateral}
-          >
+          <Button variant='outline' className='gap-2' onClick={handleAddCollateral}>
             <ArrowDownCircle className='size-4' />
             Add Collateral
           </Button>
 
-          <Button
-            variant='outline'
-            className='gap-2'
-            onClick={handleAdjustLeverage}
-          >
+          <Button variant='outline' className='gap-2' onClick={handleAdjustLeverage}>
             <TrendingUp className='size-4' />
             Adjust Leverage
           </Button>
 
-          <Button
-            variant='destructive'
-            className='gap-2'
-            onClick={handleClosePosition}
-          >
+          <Button variant='destructive' className='gap-2' onClick={handleClosePosition}>
             <ArrowUpCircle className='size-4' />
             Close Position
           </Button>
@@ -431,46 +322,30 @@ export default function PositionDetailsPage() {
 
           <div>
             <p className='text-sm text-muted-foreground'>Position Type</p>
-            <p className='font-medium'>
-              {pool?.positionType === 0 ? 'Long' : 'Short'}
-            </p>
+            <p className='font-medium'>{pool?.positionType === 0 ? 'Long' : 'Short'}</p>
           </div>
 
           <div>
             <p className='text-sm text-muted-foreground'>Pool Address</p>
-            <p className='font-medium font-mono text-sm'>
-              {formatAddress(poolAddress)}
-            </p>
+            <p className='font-medium font-mono text-sm'>{formatAddress(poolAddress)}</p>
           </div>
 
           <div>
             <p className='text-sm text-muted-foreground'>Interest Rate</p>
-            <p className='font-medium'>
-              {pool?.interestRate
-                ? Number(pool.interestRate).toFixed(2)
-                : '0.00'}
-              %
-            </p>
+            <p className='font-medium'>{pool?.interestRate ? Number(pool.interestRate).toFixed(2) : '0.00'}%</p>
           </div>
 
           <div>
-            <p className='text-sm text-muted-foreground'>
-              Liquidation Threshold
-            </p>
+            <p className='text-sm text-muted-foreground'>Liquidation Threshold</p>
             <p className='font-medium'>
-              {pool?.liquidationThresholdPercentage
-                ? Number(pool.liquidationThresholdPercentage).toFixed(0)
-                : '0'}
-              %
+              {pool?.liquidationThresholdPercentage ? Number(pool.liquidationThresholdPercentage).toFixed(0) : '0'}%
             </p>
           </div>
 
           <div>
             <p className='text-sm text-muted-foreground'>Position Created</p>
             <p className='font-medium'>
-              {lastUpdated
-                ? new Date(Number(lastUpdated) * 1000).toLocaleDateString()
-                : 'Unknown'}
+              {lastUpdated ? new Date(Number(lastUpdated) * 1000).toLocaleDateString() : 'Unknown'}
             </p>
           </div>
         </div>

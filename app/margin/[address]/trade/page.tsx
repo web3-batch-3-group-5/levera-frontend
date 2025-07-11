@@ -2,29 +2,20 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import {
-  Address,
-  parseUnits,
-  formatUnits,
-  zeroAddress,
-  maxUint256,
-} from 'viem';
+import { Address, parseUnits, formatUnits, zeroAddress, maxUint256 } from 'viem';
 import { useAccount } from 'wagmi';
 import { Button } from '@/components/shared/Button';
 import { ArrowLeft, Info } from 'lucide-react';
 import { useLendingPool } from '@/hooks/useLendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
 import { formatTokenAmount } from '@/lib/utils/format';
-import {
-  useReadContract,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-} from 'wagmi';
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { erc20Abi } from 'viem';
 import { toast } from 'sonner';
 import { LiquidationCalculator } from '@/lib/health';
 import { convertPrice } from '@/lib/convertPrice';
-import { CONTRACTS, PoolDetails } from '@/config/contracts';
+import { CONTRACTS } from '@/config/contracts';
+import { PoolDetails } from '@/types';
 
 export default function MarginTradePage() {
   const router = useRouter();
@@ -37,15 +28,11 @@ export default function MarginTradePage() {
   const [leverage, setLeverage] = useState(1.5);
   const [txHash, setTxHash] = useState<`0x${string}` | undefined>(undefined);
   const [needsApproval, setNeedsApproval] = useState(true);
-  const [approvalStep, setApprovalStep] = useState<
-    'none' | 'wallet' | 'factory'
-  >('none');
+  const [approvalStep, setApprovalStep] = useState<'none' | 'wallet' | 'factory'>('none');
 
   // Get pool data
   const { poolAddresses, pools } = useLendingPoolFactory();
-  const poolIndex = poolAddresses.findIndex(
-    (addr) => addr.toLowerCase() === poolAddress.toLowerCase()
-  );
+  const poolIndex = poolAddresses.findIndex(addr => addr.toLowerCase() === poolAddress.toLowerCase());
   const pool = poolIndex !== -1 ? pools[poolIndex] : undefined;
 
   // Get pool details for risk calculations
@@ -55,10 +42,9 @@ export default function MarginTradePage() {
   const { writeContract, isPending: isWritePending } = useWriteContract();
 
   // Transaction confirmation
-  const { isLoading: isConfirming, data: receipt } =
-    useWaitForTransactionReceipt({
-      hash: txHash,
-    });
+  const { isLoading: isConfirming, data: receipt } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
 
   // Get token balance
   const { data: walletBalance } = useReadContract({
@@ -69,13 +55,12 @@ export default function MarginTradePage() {
   });
 
   // Get token allowance for wallet
-  const { data: walletAllowance, refetch: refetchWalletAllowance } =
-    useReadContract({
-      address: pool?.collateralToken,
-      abi: erc20Abi,
-      functionName: 'allowance',
-      args: [userAddress || zeroAddress, CONTRACTS.POSITION_FACTORY.address],
-    });
+  const { data: walletAllowance, refetch: refetchWalletAllowance } = useReadContract({
+    address: pool?.collateralToken,
+    abi: erc20Abi,
+    functionName: 'allowance',
+    args: [userAddress || zeroAddress, CONTRACTS.POSITION_FACTORY.address],
+  });
 
   // Check if approval is needed
   useEffect(() => {
@@ -115,14 +100,7 @@ export default function MarginTradePage() {
         router.push(`/margin/${poolAddress}`);
       }
     }
-  }, [
-    receipt,
-    router,
-    poolAddress,
-    needsApproval,
-    approvalStep,
-    refetchWalletAllowance,
-  ]);
+  }, [receipt, router, poolAddress, needsApproval, approvalStep, refetchWalletAllowance]);
 
   // Calculate position details based on contract logic
   const calculatePositionDetails = (pool?: PoolDetails) => {
@@ -144,43 +122,26 @@ export default function MarginTradePage() {
       const leverageBasisPoints = Math.floor(leverage * 100);
 
       // baseCollateral * (leverage - 100) / 100
-      const borrowCollateral =
-        (collateralValue * (leverageBasisPoints - 100)) / 100;
+      const borrowCollateral = (collateralValue * (leverageBasisPoints - 100)) / 100;
 
       // Simple approximation for borrowAmount
-      const borrowAmount = convertPrice(
-        pool.loanTokenSymbol,
-        pool.collateralTokenSymbol,
-        borrowCollateral
-      );
+      const borrowAmount = convertPrice(pool.loanTokenSymbol, pool.collateralTokenSymbol, borrowCollateral);
 
       const effectiveCollateral = (collateralValue * leverageBasisPoints) / 100;
       const effectiveCollateralPrice = convertPrice(
         pool.loanTokenSymbol,
         pool.collateralTokenSymbol,
-        effectiveCollateral
+        effectiveCollateral,
       );
 
       // Use LiquidationCalculator from health.ts
       const calculator = new LiquidationCalculator(ltp || 80n);
-      const liquidationPrice = calculator.getLiquidationPrice(
-        effectiveCollateral,
-        borrowAmount
-      );
-      const healthFactor = calculator.getHealth(
-        effectiveCollateralPrice,
-        borrowAmount
-      );
-      const loanToValue = calculator.getLTV(
-        effectiveCollateralPrice,
-        borrowAmount
-      );
+      const liquidationPrice = calculator.getLiquidationPrice(effectiveCollateral, borrowAmount);
+      const healthFactor = calculator.getHealth(effectiveCollateralPrice, borrowAmount);
+      const loanToValue = calculator.getLTV(effectiveCollateralPrice, borrowAmount);
 
       return {
-        borrowAmount: parseUnits(
-          borrowAmount.toFixed(pool?.loanTokenDecimals || 18),
-          pool?.loanTokenDecimals || 18
-        ),
+        borrowAmount: parseUnits(borrowAmount.toFixed(pool?.loanTokenDecimals || 18), pool?.loanTokenDecimals || 18),
         liquidationPrice: liquidationPrice.toFixed(2),
         healthFactor: healthFactor,
         loanToValue: loanToValue,
@@ -203,10 +164,7 @@ export default function MarginTradePage() {
   // Handle percentage buttons
   const handlePercentageClick = (percentage: number) => {
     if (!walletBalance) return;
-    const amount =
-      (Number(formatUnits(walletBalance, pool?.collateralTokenDecimals || 18)) *
-        percentage) /
-      100;
+    const amount = (Number(formatUnits(walletBalance, pool?.collateralTokenDecimals || 18)) * percentage) / 100;
     setCollateralAmount(amount.toString());
   };
 
@@ -214,10 +172,7 @@ export default function MarginTradePage() {
   const isExceedingBalance = () => {
     if (!walletBalance || !collateralAmount) return false;
     try {
-      const amount = parseUnits(
-        collateralAmount,
-        pool?.collateralTokenDecimals || 18
-      );
+      const amount = parseUnits(collateralAmount, pool?.collateralTokenDecimals || 18);
       return amount > walletBalance;
     } catch {
       return false;
@@ -239,7 +194,7 @@ export default function MarginTradePage() {
           args: [CONTRACTS.POSITION_FACTORY.address, maxUint256],
         },
         {
-          onSuccess: (hash) => {
+          onSuccess: hash => {
             console.log('Wallet approval transaction hash:', hash);
             setTxHash(hash);
             toast.dismiss('approve-tx');
@@ -247,12 +202,12 @@ export default function MarginTradePage() {
               id: 'tx-confirm',
             });
           },
-          onError: (error) => {
+          onError: error => {
             console.error('Wallet approval error:', error);
             toast.dismiss('approve-tx');
             toast.error('Failed to approve token');
           },
-        }
+        },
       );
     } catch (error) {
       console.error('Wallet approval error:', error);
@@ -266,10 +221,7 @@ export default function MarginTradePage() {
     if (!collateralAmount || !pool || !userAddress) return;
 
     try {
-      const collateralAmountBigInt = parseUnits(
-        collateralAmount,
-        pool?.collateralTokenDecimals || 18
-      );
+      const collateralAmountBigInt = parseUnits(collateralAmount, pool?.collateralTokenDecimals || 18);
 
       // Convert leverage from decimal (e.g., 1.5) to basis points (e.g., 150)
       // Important: Contract expects leverage in basis points (100 = 1x)
@@ -296,23 +248,20 @@ export default function MarginTradePage() {
           ],
         },
         {
-          onSuccess: (hash) => {
+          onSuccess: hash => {
             console.log('Position creation transaction hash:', hash);
             setTxHash(hash);
             toast.dismiss('create-position');
-            toast.loading(
-              'Transaction submitted, waiting for confirmation...',
-              {
-                id: 'tx-confirm',
-              }
-            );
+            toast.loading('Transaction submitted, waiting for confirmation...', {
+              id: 'tx-confirm',
+            });
           },
-          onError: (error) => {
+          onError: error => {
             console.error('Position creation Error:', error);
             toast.dismiss('create-position');
             toast.error('Failed to create position: ' + error.message);
           },
-        }
+        },
       );
     } catch (error) {
       console.error('Error creating position:', error);
@@ -348,9 +297,7 @@ export default function MarginTradePage() {
             <h1 className='text-xl font-bold mb-2 px-2'>
               {pool.loanTokenSymbol}/{pool.collateralTokenSymbol} Trade
             </h1>
-            <p className='text-sm text-muted-foreground px-2'>
-              Open a margin position with this pool
-            </p>
+            <p className='text-sm text-muted-foreground px-2'>Open a margin position with this pool</p>
           </div>
 
           {/* Collateral Input */}
@@ -370,15 +317,13 @@ export default function MarginTradePage() {
               <input
                 type='number'
                 value={collateralAmount}
-                onChange={(e) => setCollateralAmount(e.target.value)}
+                onChange={e => setCollateralAmount(e.target.value)}
                 className='w-full bg-background p-3 rounded border'
                 placeholder='0.00'
                 disabled={isWritePending || isConfirming}
               />
               <div className='absolute right-3 top-1/2 -translate-y-1/2'>
-                <span className='text-sm font-medium pr-6'>
-                  {pool.collateralTokenSymbol}
-                </span>
+                <span className='text-sm font-medium pr-6'>{pool.collateralTokenSymbol}</span>
               </div>
             </div>
 
@@ -390,7 +335,7 @@ export default function MarginTradePage() {
             )}
 
             <div className='flex gap-2'>
-              {[25, 50, 75, 100].map((percentage) => (
+              {[25, 50, 75, 100].map(percentage => (
                 <Button
                   key={percentage}
                   variant='outline'
@@ -416,7 +361,7 @@ export default function MarginTradePage() {
               max='3'
               step='0.1'
               value={leverage}
-              onChange={(e) => setLeverage(parseFloat(e.target.value))}
+              onChange={e => setLeverage(parseFloat(e.target.value))}
               className='w-full'
               disabled={isWritePending || isConfirming}
             />
@@ -430,61 +375,43 @@ export default function MarginTradePage() {
           {/* Position Summary */}
           <div className='bg-muted/50 rounded-lg p-4 space-y-3'>
             <div className='flex justify-between'>
-              <span className='text-sm text-muted-foreground'>
-                Base Collateral
-              </span>
+              <span className='text-sm text-muted-foreground'>Base Collateral</span>
               <span>
-                {parseFloat(collateralAmount || '0').toFixed(4)}{' '}
-                {pool?.collateralTokenSymbol}
+                {parseFloat(collateralAmount || '0').toFixed(4)} {pool?.collateralTokenSymbol}
               </span>
             </div>
             <div className='flex justify-between'>
-              <span className='text-sm text-muted-foreground'>
-                Effective Collateral
-              </span>
+              <span className='text-sm text-muted-foreground'>Effective Collateral</span>
               <span>
-                {positionDetails.effectiveCollateral.toFixed(4)}{' '}
-                {pool?.collateralTokenSymbol}
+                {positionDetails.effectiveCollateral.toFixed(4)} {pool?.collateralTokenSymbol}
               </span>
             </div>
             <div className='flex justify-between'>
-              <span className='text-sm text-muted-foreground'>
-                Borrow Amount
-              </span>
+              <span className='text-sm text-muted-foreground'>Borrow Amount</span>
               <span>
-                {formatUnits(
-                  positionDetails.borrowAmount,
-                  pool.loanTokenDecimals
-                )}{' '}
-                {pool.loanTokenSymbol}
+                {formatUnits(positionDetails.borrowAmount, pool.loanTokenDecimals)} {pool.loanTokenSymbol}
               </span>
             </div>
             <div className='flex justify-between'>
-              <span className='text-sm text-muted-foreground'>
-                Liquidation Price
-              </span>
+              <span className='text-sm text-muted-foreground'>Liquidation Price</span>
               <span>${positionDetails.liquidationPrice}</span>
             </div>
             <div className='flex justify-between'>
-              <span className='text-sm text-muted-foreground'>
-                Health Factor
-              </span>
+              <span className='text-sm text-muted-foreground'>Health Factor</span>
               <span
                 className={
                   positionDetails.healthFactor < 1.1
                     ? 'text-red-500'
                     : positionDetails.healthFactor < 1.3
-                    ? 'text-yellow-500'
-                    : 'text-green-500'
+                      ? 'text-yellow-500'
+                      : 'text-green-500'
                 }
               >
                 {positionDetails.healthFactor.toFixed(2)}
               </span>
             </div>
             <div className='flex justify-between'>
-              <span className='text-sm text-muted-foreground'>
-                Loan to Value
-              </span>
+              <span className='text-sm text-muted-foreground'>Loan to Value</span>
               <span>{(positionDetails.loanToValue * 100).toFixed(2)}%</span>
             </div>
           </div>
@@ -497,9 +424,7 @@ export default function MarginTradePage() {
               onClick={handleApproveWallet}
               disabled={!pool || isWritePending || isConfirming}
             >
-              {isWritePending || isConfirming
-                ? 'Approving...'
-                : `Approve ${pool.collateralTokenSymbol}`}
+              {isWritePending || isConfirming ? 'Approving...' : `Approve ${pool.collateralTokenSymbol}`}
             </Button>
           ) : (
             <Button
@@ -514,9 +439,7 @@ export default function MarginTradePage() {
                 Number(collateralAmount) <= 0
               }
             >
-              {isWritePending || isConfirming
-                ? 'Creating Position...'
-                : 'Create Position'}
+              {isWritePending || isConfirming ? 'Creating Position...' : 'Create Position'}
             </Button>
           )}
         </div>

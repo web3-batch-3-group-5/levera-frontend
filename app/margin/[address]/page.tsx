@@ -4,15 +4,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
 import { Address } from 'viem';
 import { Button } from '@/components/shared/Button';
-import {
-  ArrowLeft,
-  Info,
-  AlertTriangle,
-  Plus,
-  Scale,
-  Activity,
-  TrendingUp,
-} from 'lucide-react';
+import { ArrowLeft, Info, AlertTriangle, Plus, Scale, Activity, TrendingUp } from 'lucide-react';
 import { useLendingPool } from '@/hooks/useLendingPool';
 import { useLendingPoolFactory } from '@/hooks/useLendingPoolFactory';
 import { formatTokenAmount } from '@/lib/utils/format';
@@ -46,9 +38,7 @@ export default function MarginDetailsPage() {
 
   // Get pool details
   const { poolAddresses, pools } = useLendingPoolFactory();
-  const poolIndex = poolAddresses.findIndex(
-    (addr) => addr.toLowerCase() === poolAddress.toLowerCase()
-  );
+  const poolIndex = poolAddresses.findIndex(addr => addr.toLowerCase() === poolAddress.toLowerCase());
   const pool = poolIndex !== -1 ? pools[poolIndex] : undefined;
 
   // Get pool data
@@ -77,11 +67,7 @@ export default function MarginDetailsPage() {
   if (!isLoading && !pool) {
     return (
       <div className='container mx-auto px-4 py-8'>
-        <Button
-          variant='ghost'
-          onClick={() => router.push('/margin')}
-          className='gap-2 mb-8'
-        >
+        <Button variant='ghost' onClick={() => router.push('/margin')} className='gap-2 mb-8'>
           <ArrowLeft className='size-4' />
           Back To Margin Trading
         </Button>
@@ -90,12 +76,9 @@ export default function MarginDetailsPage() {
           <AlertTriangle className='size-12 text-destructive mx-auto mb-4' />
           <h2 className='text-xl font-bold mb-2'>Pool Not Found</h2>
           <p className='text-muted-foreground mb-6'>
-            The margin trading pool you&apos;re looking for doesn&apos;t exist
-            or has been removed.
+            The margin trading pool you&apos;re looking for doesn&apos;t exist or has been removed.
           </p>
-          <Button onClick={() => router.push('/margin')}>
-            Return to Margin Trading
-          </Button>
+          <Button onClick={() => router.push('/margin')}>Return to Margin Trading</Button>
         </div>
       </div>
     );
@@ -104,11 +87,7 @@ export default function MarginDetailsPage() {
   return (
     <main className='container mx-auto px-4 py-8'>
       <div className='flex justify-between items-center mb-6'>
-        <Button
-          variant='ghost'
-          onClick={() => router.push('/margin')}
-          className='gap-2'
-        >
+        <Button variant='ghost' onClick={() => router.push('/margin')} className='gap-2'>
           <ArrowLeft className='size-4' />
           Back To Margin Trading
         </Button>
@@ -120,12 +99,9 @@ export default function MarginDetailsPage() {
           <div className='bg-destructive/10 border border-destructive rounded-lg p-4 flex items-center gap-3'>
             <AlertTriangle className='size-5 text-destructive flex-shrink-0' />
             <div>
-              <h3 className='font-medium text-destructive'>
-                Error loading data
-              </h3>
+              <h3 className='font-medium text-destructive'>Error loading data</h3>
               <p className='text-sm text-muted-foreground'>
-                {error.message ||
-                  'An error occurred while loading the pool data. Please try again later.'}
+                {error.message || 'An error occurred while loading the pool data. Please try again later.'}
               </p>
             </div>
           </div>
@@ -139,14 +115,11 @@ export default function MarginDetailsPage() {
                 <div className='h-9 bg-muted rounded w-48 animate-pulse'></div>
               ) : (
                 <>
-                  {pool?.loanTokenSymbol}/{pool?.collateralTokenSymbol} Trading
-                  Pool
+                  {pool?.loanTokenSymbol}/{pool?.collateralTokenSymbol} Trading Pool
                 </>
               )}
             </h1>
-            <p className='text-sm text-muted-foreground mt-1'>
-              Pool Address: {formatAddress(poolAddress)}
-            </p>
+            <p className='text-sm text-muted-foreground mt-1'>Pool Address: {formatAddress(poolAddress)}</p>
           </div>
           <div>
             {isClient && isConnected && (
@@ -162,10 +135,7 @@ export default function MarginDetailsPage() {
         {isLoading ? (
           <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
             {Array.from({ length: 3 }).map((_, i) => (
-              <div
-                key={i}
-                className='bg-card rounded-lg border p-6 animate-pulse'
-              >
+              <div key={i} className='bg-card rounded-lg border p-6 animate-pulse'>
                 <div className='flex items-center gap-2 mb-2'>
                   <div className='w-4 h-4 bg-muted rounded'></div>
                   <div className='h-4 w-24 bg-muted rounded'></div>
@@ -183,9 +153,7 @@ export default function MarginDetailsPage() {
                   <TrendingUp className='size-4 text-primary' />
                   <h3 className='text-sm font-medium'>Position Type</h3>
                 </div>
-                <p className='text-2xl font-bold'>
-                  {pool.positionType === 0 ? 'LONG' : 'SHORT'}
-                </p>
+                <p className='text-2xl font-bold'>{pool.positionType === 0 ? 'LONG' : 'SHORT'}</p>
                 <p className='text-sm text-muted-foreground mt-1'>
                   {pool.positionType === 0
                     ? `${pool.collateralTokenSymbol} → ${pool.loanTokenSymbol}`
@@ -199,14 +167,9 @@ export default function MarginDetailsPage() {
                   <h3 className='text-sm font-medium'>Liquidation Threshold</h3>
                 </div>
                 <p className='text-2xl font-bold'>
-                  {pool.liquidationThresholdPercentage
-                    ? Number(pool.liquidationThresholdPercentage).toFixed(0)
-                    : '0'}
-                  %
+                  {pool.liquidationThresholdPercentage ? Number(pool.liquidationThresholdPercentage).toFixed(0) : '0'}%
                 </p>
-                <p className='text-sm text-muted-foreground mt-1'>
-                  Health factor below 1.0 triggers liquidation
-                </p>
+                <p className='text-sm text-muted-foreground mt-1'>Health factor below 1.0 triggers liquidation</p>
               </div>
 
               <div className='bg-card rounded-lg border p-6'>
@@ -214,12 +177,8 @@ export default function MarginDetailsPage() {
                   <Activity className='size-4 text-primary' />
                   <h3 className='text-sm font-medium'>Interest Rate</h3>
                 </div>
-                <p className='text-2xl font-bold'>
-                  {formatPercentage(Number(interestRate || 0n))}
-                </p>
-                <p className='text-sm text-muted-foreground mt-1'>
-                  Annual interest rate for borrows
-                </p>
+                <p className='text-2xl font-bold'>{formatPercentage(Number(interestRate || 0n))}</p>
+                <p className='text-sm text-muted-foreground mt-1'>Annual interest rate for borrows</p>
               </div>
             </div>
           )
@@ -239,10 +198,7 @@ export default function MarginDetailsPage() {
 
           <div className='p-6'>
             {/* Use the improved PositionDashboard component */}
-            <PositionDashboard
-              poolAddress={poolAddress}
-              onCreatePosition={handleOpenPosition}
-            />
+            <PositionDashboard poolAddress={poolAddress} onCreatePosition={handleOpenPosition} />
           </div>
         </div>
 
@@ -281,21 +237,15 @@ export default function MarginDetailsPage() {
                 </div>
 
                 <div>
-                  <p className='text-sm text-muted-foreground'>
-                    Collateral Token
-                  </p>
+                  <p className='text-sm text-muted-foreground'>Collateral Token</p>
                   <p className='font-medium'>
                     {pool.collateralTokenSymbol} ({pool.collateralTokenName})
                   </p>
                 </div>
 
                 <div>
-                  <p className='text-sm text-muted-foreground'>
-                    Utilization Rate
-                  </p>
-                  <p className='font-medium'>
-                    {formatPercentage(utilizationRate)}
-                  </p>
+                  <p className='text-sm text-muted-foreground'>Utilization Rate</p>
+                  <p className='font-medium'>{formatPercentage(utilizationRate)}</p>
                 </div>
 
                 <div>
@@ -309,9 +259,7 @@ export default function MarginDetailsPage() {
                 </div>
 
                 <div>
-                  <p className='text-sm text-muted-foreground'>
-                    Total Borrowed
-                  </p>
+                  <p className='text-sm text-muted-foreground'>Total Borrowed</p>
                   <p className='font-medium'>
                     {formatTokenAmount(totalBorrowAssets, {
                       decimals: pool.loanTokenDecimals,
@@ -322,9 +270,7 @@ export default function MarginDetailsPage() {
 
                 <div>
                   <p className='text-sm text-muted-foreground'>Created By</p>
-                  <p className='font-medium font-mono text-sm'>
-                    {formatAddress(pool.creator)}
-                  </p>
+                  <p className='font-medium font-mono text-sm'>{formatAddress(pool.creator)}</p>
                 </div>
               </div>
 
@@ -335,14 +281,11 @@ export default function MarginDetailsPage() {
                   <div>
                     <h4 className='text-sm font-medium'>Pool Health</h4>
                     <p className='text-sm text-muted-foreground'>
-                      This pool has a{' '}
-                      {formatPercentage(Number(interestRate || 0n))} interest
-                      rate and a{' '}
+                      This pool has a {formatPercentage(Number(interestRate || 0n))} interest rate and a{' '}
                       {pool.liquidationThresholdPercentage
                         ? Number(pool.liquidationThresholdPercentage).toFixed(0)
                         : '0'}
-                      % liquidation threshold. Positions are{' '}
-                      {pool.positionType === 0 ? 'LONG' : 'SHORT'}, meaning
+                      % liquidation threshold. Positions are {pool.positionType === 0 ? 'LONG' : 'SHORT'}, meaning
                       you&apos;ll profit when
                       {pool.positionType === 0
                         ? ` the price of ${pool.collateralTokenSymbol} increases relative to ${pool.loanTokenSymbol}.`
@@ -362,31 +305,23 @@ export default function MarginDetailsPage() {
             <div>
               <h4 className='text-base font-medium mb-2'>How Leverage Works</h4>
               <p className='text-sm text-muted-foreground mb-2'>
-                Leverage allows you to multiply your exposure to price movements
-                by borrowing assets from the lending pool. For example, with 2x
-                leverage:
+                Leverage allows you to multiply your exposure to price movements by borrowing assets from the lending
+                pool. For example, with 2x leverage:
               </p>
               <ul className='list-disc list-inside text-sm text-muted-foreground space-y-1 pl-2'>
-                <li>
-                  If the market moves 10% in your favor, your returns are ~20%
-                </li>
-                <li>
-                  If the market moves 10% against you, your losses are ~20%
-                </li>
+                <li>If the market moves 10% in your favor, your returns are ~20%</li>
+                <li>If the market moves 10% against you, your losses are ~20%</li>
               </ul>
             </div>
             <div>
               <h4 className='text-base font-medium mb-2'>Liquidation Risk</h4>
               <p className='text-sm text-muted-foreground mb-2'>
-                Higher leverage means higher risk of liquidation. Your position
-                will be liquidated if:
+                Higher leverage means higher risk of liquidation. Your position will be liquidated if:
               </p>
               <ul className='list-disc list-inside text-sm text-muted-foreground space-y-1 pl-2'>
                 <li>Your health factor drops below 1.0</li>
                 <li>The market price reaches your liquidation price</li>
-                <li>
-                  Always monitor your positions and add collateral if needed
-                </li>
+                <li>Always monitor your positions and add collateral if needed</li>
               </ul>
             </div>
           </div>
@@ -395,9 +330,8 @@ export default function MarginDetailsPage() {
             <div className='flex items-start gap-2'>
               <Info className='size-4 text-blue-500 mt-0.5 flex-shrink-0' />
               <p className='text-sm text-blue-700 dark:text-blue-300'>
-                For this pool, the maximum leverage is 3x. Higher leverage means
-                higher returns but also higher risk. Start with lower leverage
-                if you&apos;re new to margin trading.
+                For this pool, the maximum leverage is 3x. Higher leverage means higher returns but also higher risk.
+                Start with lower leverage if you&apos;re new to margin trading.
               </p>
             </div>
           </div>

@@ -2,22 +2,12 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import {
-  Address,
-  parseUnits,
-  formatUnits,
-  zeroAddress,
-  maxUint256,
-} from 'viem';
+import { Address, parseUnits, formatUnits, zeroAddress, maxUint256 } from 'viem';
 import { useAccount } from 'wagmi';
 import { Button } from '@/components/shared/Button';
 import { ArrowLeft, Info, WalletIcon } from 'lucide-react';
 import { formatAddress } from '@/lib/utils';
-import {
-  useReadContract,
-  useWriteContract,
-  useWaitForTransactionReceipt,
-} from 'wagmi';
+import { useReadContract, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { erc20Abi } from 'viem';
 import { toast } from 'sonner';
 import { lendingPoolABI } from '@/lib/abis/lendingPool';
@@ -43,17 +33,14 @@ export default function SupplyPage() {
   const { poolAddresses, pools } = useLendingPoolFactory();
   console.log('Pool Addresses:', poolAddresses);
 
-  const poolIndex = poolAddresses.findIndex(
-    (addr) => addr.toLowerCase() === poolAddress.toLowerCase()
-  );
+  const poolIndex = poolAddresses.findIndex(addr => addr.toLowerCase() === poolAddress.toLowerCase());
   const pool = poolIndex !== -1 ? pools[poolIndex] : undefined;
 
   console.log('Selected Pool:', pool);
 
   // Contract state
   const { writeContract, isPending: isSupplyPending } = useWriteContract();
-  const { data: receipt, isLoading: isConfirming } =
-    useWaitForTransactionReceipt({ hash: txHash });
+  const { data: receipt, isLoading: isConfirming } = useWaitForTransactionReceipt({ hash: txHash });
 
   // Check token balance and allowance
   const { data: tokenBalance } = useReadContract({
@@ -63,14 +50,12 @@ export default function SupplyPage() {
     args: [userAddress || zeroAddress],
   });
 
-  const { data: currentAllowance, refetch: refetchAllowance } = useReadContract(
-    {
-      address: pool?.loanToken,
-      abi: erc20Abi,
-      functionName: 'allowance',
-      args: [userAddress || zeroAddress, poolAddress],
-    }
-  );
+  const { data: currentAllowance, refetch: refetchAllowance } = useReadContract({
+    address: pool?.loanToken,
+    abi: erc20Abi,
+    functionName: 'allowance',
+    args: [userAddress || zeroAddress, poolAddress],
+  });
 
   console.log('Token Balance:', tokenBalance);
   console.log('Current Allowance:', currentAllowance);
@@ -88,9 +73,7 @@ export default function SupplyPage() {
 
         // Only mark as needing approval if amount is greater than 0 and allowance is insufficient
         const amountBigInt = parseUnits(amount || '0', pool.loanTokenDecimals);
-        const needsApproval =
-          amountBigInt > 0n &&
-          (currentAllowance === undefined || currentAllowance < amountBigInt);
+        const needsApproval = amountBigInt > 0n && (currentAllowance === undefined || currentAllowance < amountBigInt);
 
         setNeedsApproval(needsApproval);
       } catch (error) {
@@ -99,14 +82,7 @@ export default function SupplyPage() {
     };
 
     checkApproval();
-  }, [
-    amount,
-    userAddress,
-    currentAllowance,
-    pool,
-    pool?.loanTokenDecimals,
-    refetchAllowance,
-  ]);
+  }, [amount, userAddress, currentAllowance, pool, pool?.loanTokenDecimals, refetchAllowance]);
 
   // Update supplyAmount when amount changes
   useEffect(() => {
@@ -143,7 +119,7 @@ export default function SupplyPage() {
         toast.success(
           `Successfully supplied ${formatTokenAmount(supplyAmount, {
             decimals: pool?.loanTokenDecimals,
-          })} ${pool?.loanTokenSymbol}!`
+          })} ${pool?.loanTokenSymbol}!`,
         );
 
         // Redirect to pool details after a brief delay
@@ -152,15 +128,7 @@ export default function SupplyPage() {
         }, 2000); // 2 second delay to show the success message
       }
     }
-  }, [
-    receipt,
-    router,
-    supplyAmount,
-    pool?.loanTokenSymbol,
-    poolAddress,
-    needsApproval,
-    refetchAllowance,
-  ]);
+  }, [receipt, router, supplyAmount, pool?.loanTokenSymbol, poolAddress, needsApproval, refetchAllowance]);
 
   // Handle token approval
   const handleApprove = async () => {
@@ -180,7 +148,7 @@ export default function SupplyPage() {
           args: [poolAddress, maxUint256],
         },
         {
-          onSuccess: (hash) => {
+          onSuccess: hash => {
             console.log('Approval transaction hash:', hash);
             setTxHash(hash);
             toast.dismiss('approve-confirm');
@@ -188,12 +156,12 @@ export default function SupplyPage() {
               id: 'tx-confirm',
             });
           },
-          onError: (error) => {
+          onError: error => {
             console.error('Approval Error:', error);
             toast.dismiss('approve-confirm');
             toast.error('Failed to approve token');
           },
-        }
+        },
       );
     } catch (error) {
       console.error('Approval Error:', error);
@@ -229,21 +197,18 @@ export default function SupplyPage() {
           args: [supplyAmount],
         },
         {
-          onSuccess: (hash) => {
+          onSuccess: hash => {
             console.log('Supply transaction hash:', hash);
             setTxHash(hash);
             toast.dismiss('tx-confirm');
-            toast.loading(
-              'Transaction submitted, waiting for confirmation...',
-              { id: 'tx-confirm' }
-            );
+            toast.loading('Transaction submitted, waiting for confirmation...', { id: 'tx-confirm' });
           },
-          onError: (error) => {
+          onError: error => {
             console.error('Supply Error:', error);
             toast.dismiss('tx-confirm');
             toast.error('Failed to supply tokens');
           },
-        }
+        },
       );
     } catch (error) {
       console.error('Error in supply process:', error);
@@ -255,10 +220,7 @@ export default function SupplyPage() {
   // Handle percentage buttons
   const handlePercentageClick = (percentage: number) => {
     if (!tokenBalance) return;
-    const amount =
-      (Number(formatUnits(tokenBalance, pool?.loanTokenDecimals || 18)) *
-        percentage) /
-      100;
+    const amount = (Number(formatUnits(tokenBalance, pool?.loanTokenDecimals || 18)) * percentage) / 100;
     setAmount(amount.toString());
   };
 
@@ -293,11 +255,7 @@ export default function SupplyPage() {
 
   return (
     <main className='container mx-auto px-4 py-8'>
-      <Button
-        variant='ghost'
-        className='mb-6'
-        onClick={() => router.push(`/pools/${poolAddress}`)}
-      >
+      <Button variant='ghost' className='mb-6' onClick={() => router.push(`/pools/${poolAddress}`)}>
         <ArrowLeft className='size-4 mr-2' />
         Back to Pool Details
       </Button>
@@ -305,21 +263,17 @@ export default function SupplyPage() {
       <div className='max-w-xl mx-auto'>
         <div className='bg-card rounded-lg border p-6 space-y-6'>
           <div>
-            <h1 className='text-2xl font-bold mb-2 px-2'>
-              Supply {pool.loanTokenSymbol}
-            </h1>
+            <h1 className='text-2xl font-bold mb-2 px-2'>Supply {pool.loanTokenSymbol}</h1>
             <p className='text-sm text-muted-foreground px-2'>
-              Supply {pool.loanTokenSymbol} to earn interest in the{' '}
-              {pool.loanTokenSymbol}/{pool.collateralTokenSymbol} pool
+              Supply {pool.loanTokenSymbol} to earn interest in the {pool.loanTokenSymbol}/{pool.collateralTokenSymbol}{' '}
+              pool
             </p>
           </div>
 
           <div className='space-y-4'>
             <div>
               <div className='flex justify-between items-center mb-2 px-2'>
-                <label className='block text-sm font-medium'>
-                  Amount to Supply
-                </label>
+                <label className='block text-sm font-medium'>Amount to Supply</label>
                 <div className='flex items-center gap-1 text-sm text-muted-foreground'>
                   <WalletIcon className='size-3.5' />
                   <span>
@@ -332,23 +286,19 @@ export default function SupplyPage() {
                 <input
                   type='number'
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
+                  onChange={e => setAmount(e.target.value)}
                   placeholder='0.00'
                   className='w-full px-4 py-2 bg-background border rounded-md'
                   disabled={isSupplyPending || isConfirming}
                 />
                 <div className='absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2'>
                   <button
-                    onClick={() =>
-                      tokenBalance && setAmount(formatUnits(tokenBalance, 18))
-                    }
+                    onClick={() => tokenBalance && setAmount(formatUnits(tokenBalance, 18))}
                     className='text-xs text-primary hover:underline'
                   >
                     MAX
                   </button>
-                  <span className='text-sm text-muted-foreground pr-8'>
-                    {pool.loanTokenSymbol}
-                  </span>
+                  <span className='text-sm text-muted-foreground pr-8'>{pool.loanTokenSymbol}</span>
                 </div>
               </div>
 
@@ -361,7 +311,7 @@ export default function SupplyPage() {
             </div>
 
             <div className='flex gap-2'>
-              {[25, 50, 75, 100].map((percentage) => (
+              {[25, 50, 75, 100].map(percentage => (
                 <Button
                   key={percentage}
                   size='sm'
@@ -377,9 +327,7 @@ export default function SupplyPage() {
 
             <div className='bg-muted/50 rounded-lg p-4 space-y-3'>
               <div className='flex justify-between items-center'>
-                <div className='text-sm text-muted-foreground'>
-                  You will receive
-                </div>
+                <div className='text-sm text-muted-foreground'>You will receive</div>
                 <div className='font-medium'>
                   {amount ? amount : '0.00'} {pool.loanTokenSymbol}
                 </div>
@@ -388,30 +336,19 @@ export default function SupplyPage() {
               <div className='flex justify-between items-center'>
                 <div className='text-sm text-muted-foreground'>Current APR</div>
                 <div className='font-medium text-green-600'>
-                  {pool.interestRate
-                    ? Number(pool.interestRate).toFixed(2)
-                    : '0.00'}
-                  %
+                  {pool.interestRate ? Number(pool.interestRate).toFixed(2) : '0.00'}%
                 </div>
               </div>
 
               <div className='flex justify-between items-center'>
-                <div className='text-sm text-muted-foreground'>
-                  Pool Address
-                </div>
-                <div className='font-mono text-xs'>
-                  {formatAddress(poolAddress)}
-                </div>
+                <div className='text-sm text-muted-foreground'>Pool Address</div>
+                <div className='font-mono text-xs'>{formatAddress(poolAddress)}</div>
               </div>
 
               {txHash && (
                 <div className='flex justify-between items-center'>
-                  <div className='text-sm text-muted-foreground'>
-                    Transaction
-                  </div>
-                  <div className='font-mono text-xs'>
-                    {formatAddress(txHash)}
-                  </div>
+                  <div className='text-sm text-muted-foreground'>Transaction</div>
+                  <div className='font-mono text-xs'>{formatAddress(txHash)}</div>
                 </div>
               )}
             </div>
@@ -421,13 +358,7 @@ export default function SupplyPage() {
                 className='w-full'
                 size='lg'
                 onClick={handleApprove}
-                disabled={
-                  !amount ||
-                  isExceedingBalance() ||
-                  isSupplyPending ||
-                  isConfirming ||
-                  Number(amount) <= 0
-                }
+                disabled={!amount || isExceedingBalance() || isSupplyPending || isConfirming || Number(amount) <= 0}
               >
                 {isConfirming ? 'Approving...' : 'Approve'}
               </Button>
@@ -436,19 +367,9 @@ export default function SupplyPage() {
                 className='w-full'
                 size='lg'
                 onClick={handleSupply}
-                disabled={
-                  !amount ||
-                  isExceedingBalance() ||
-                  isSupplyPending ||
-                  isConfirming ||
-                  Number(amount) <= 0
-                }
+                disabled={!amount || isExceedingBalance() || isSupplyPending || isConfirming || Number(amount) <= 0}
               >
-                {isConfirming
-                  ? 'Confirming...'
-                  : isSupplyPending
-                  ? 'Supplying...'
-                  : 'Supply'}
+                {isConfirming ? 'Confirming...' : isSupplyPending ? 'Supplying...' : 'Supply'}
               </Button>
             )}
           </div>

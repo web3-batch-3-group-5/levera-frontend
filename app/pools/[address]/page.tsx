@@ -25,32 +25,19 @@ export default function PoolDetailsPage() {
   const poolAddress = params.address as Address;
 
   const { poolAddresses, pools } = useLendingPoolFactory();
-  const poolIndex = poolAddresses.findIndex(
-    (addr) => addr.toLowerCase() === poolAddress.toLowerCase()
-  );
+  const poolIndex = poolAddresses.findIndex(addr => addr.toLowerCase() === poolAddress.toLowerCase());
   const pool = poolIndex !== -1 ? pools[poolIndex] : undefined;
 
-  const {
-    totalSupplyAssets,
-    totalSupplyShares,
-    totalBorrowAssets,
-    userSupplyShares,
-    interestRate,
-    isPending,
-  } = useLendingPool(poolAddress);
+  const { totalSupplyAssets, totalSupplyShares, totalBorrowAssets, userSupplyShares, interestRate, isPending } =
+    useLendingPool(poolAddress);
 
   // Calculate utilization rate
   const utilizationRate =
-    totalSupplyAssets && totalSupplyAssets > 0n
-      ? (Number(totalBorrowAssets) / Number(totalSupplyAssets)) * 100
-      : 0;
+    totalSupplyAssets && totalSupplyAssets > 0n ? (Number(totalBorrowAssets) / Number(totalSupplyAssets)) * 100 : 0;
 
   // Calculate user's balance (userSupplyShares * totalSupplyAssets / totalSupplyShares)
   const userBalance =
-    userSupplyShares &&
-    totalSupplyAssets &&
-    totalSupplyShares &&
-    totalSupplyShares > 0n
+    userSupplyShares && totalSupplyAssets && totalSupplyShares && totalSupplyShares > 0n
       ? (userSupplyShares * totalSupplyAssets) / totalSupplyShares
       : 0n;
 
@@ -70,11 +57,7 @@ export default function PoolDetailsPage() {
 
   return (
     <main className='container mx-auto px-4 py-8'>
-      <Button
-        variant='ghost'
-        className='mb-6'
-        onClick={() => router.push(`/pools`)}
-      >
+      <Button variant='ghost' className='mb-6' onClick={() => router.push(`/pools`)}>
         <ArrowLeft className='size-4 mr-2' />
         Back to Pools
       </Button>
@@ -86,12 +69,8 @@ export default function PoolDetailsPage() {
             <h1 className='text-3xl font-bold mb-2'>
               {pool.loanTokenSymbol}/{pool.collateralTokenSymbol} Pool
             </h1>
-            <p className='text-sm text-muted-foreground'>
-              Pool Address: {formatAddress(poolAddress)}
-            </p>
-            <p className='text-sm text-muted-foreground'>
-              Created by {formatAddress(pool.creator)}
-            </p>
+            <p className='text-sm text-muted-foreground'>Pool Address: {formatAddress(poolAddress)}</p>
+            <p className='text-sm text-muted-foreground'>Created by {formatAddress(pool.creator)}</p>
           </div>
           <div
             className={`px-3 py-1.5 rounded-full text-sm font-medium ${
@@ -126,12 +105,7 @@ export default function PoolDetailsPage() {
               <Button
                 variant='outline'
                 onClick={() => router.push(`/pools/${poolAddress}/withdraw`)}
-                disabled={
-                  !pool.isActive ||
-                  isPending ||
-                  !userBalance ||
-                  userBalance === 0n
-                }
+                disabled={!pool.isActive || isPending || !userBalance || userBalance === 0n}
               >
                 Withdraw
               </Button>
@@ -172,12 +146,8 @@ export default function PoolDetailsPage() {
               <Percent className='size-4 text-primary' />
               <h3 className='text-sm font-medium'>Interest Rate</h3>
             </div>
-            <p className='text-2xl font-bold'>
-              {interestRate ? Number(interestRate).toFixed(2) : '0.00'}%
-            </p>
-            <p className='text-sm text-muted-foreground mt-1'>
-              Annual percentage rate
-            </p>
+            <p className='text-2xl font-bold'>{interestRate ? Number(interestRate).toFixed(2) : '0.00'}%</p>
+            <p className='text-sm text-muted-foreground mt-1'>Annual percentage rate</p>
           </div>
 
           <div className='bg-card rounded-lg border p-6'>
@@ -185,12 +155,8 @@ export default function PoolDetailsPage() {
               <BarChart3 className='size-4 text-primary' />
               <h3 className='text-sm font-medium'>Utilization</h3>
             </div>
-            <p className='text-2xl font-bold'>
-              {formatPercentage(utilizationRate)}
-            </p>
-            <p className='text-sm text-muted-foreground mt-1'>
-              Borrowed / Supplied
-            </p>
+            <p className='text-2xl font-bold'>{formatPercentage(utilizationRate)}</p>
+            <p className='text-sm text-muted-foreground mt-1'>Borrowed / Supplied</p>
           </div>
         </div>
 
@@ -212,19 +178,12 @@ export default function PoolDetailsPage() {
             </div>
             <div>
               <p className='text-sm text-muted-foreground'>Position Type</p>
-              <p className='font-medium'>
-                {pool.positionType === 0 ? 'Long' : 'Short'}
-              </p>
+              <p className='font-medium'>{pool.positionType === 0 ? 'Long' : 'Short'}</p>
             </div>
             <div>
-              <p className='text-sm text-muted-foreground'>
-                Liquidation Threshold
-              </p>
+              <p className='text-sm text-muted-foreground'>Liquidation Threshold</p>
               <p className='font-medium'>
-                {pool.liquidationThresholdPercentage
-                  ? Number(pool.liquidationThresholdPercentage)
-                  : '0.00'}
-                %
+                {pool.liquidationThresholdPercentage ? Number(pool.liquidationThresholdPercentage) : '0.00'}%
               </p>
             </div>
             <div>

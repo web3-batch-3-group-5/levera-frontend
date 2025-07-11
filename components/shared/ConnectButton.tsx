@@ -8,14 +8,7 @@ import Image from 'next/image';
 export const ConnectButton: FC = () => {
   return (
     <RainbowConnectButton.Custom>
-      {({
-        account,
-        chain,
-        openAccountModal,
-        openChainModal,
-        openConnectModal,
-        mounted,
-      }) => {
+      {({ account, chain, openAccountModal, openChainModal, openConnectModal, mounted }) => {
         const ready = mounted;
         const connected = ready && account && chain;
 
@@ -41,11 +34,7 @@ export const ConnectButton: FC = () => {
 
               if (chain.unsupported) {
                 return (
-                  <Button
-                    onClick={openChainModal}
-                    size='lg'
-                    variant='destructive'
-                  >
+                  <Button onClick={openChainModal} size='lg' variant='destructive'>
                     Wrong Network
                   </Button>
                 );
